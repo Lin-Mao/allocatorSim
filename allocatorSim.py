@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 import os
 import re
+import copy
 from enum import Enum
+
+max_block_size = 0
 
 
 class Config(Enum):
@@ -21,26 +24,53 @@ class AllocatorSim:
         print("[Allocator report]")
         print(self.segments)
         print(self.block_pool)
+        print("Number of large segments: {}".format(len(self.segments)))
         print("Max reserved size: {} B ({})".format(
             self.max_reserved_size, self.format_size(self.max_reserved_size)))
 
     def test_allocator(self):
-        segment_id, start, size = self.block_malloc(Config.kLargeBuffer.value * 2, 10)
-        print(self.segments)
-        self.block_free(segment_id, start, size)
-        print(self.segments)
-
-        print("====================================")
-        segment_id, start, size = self.block_malloc(Config.kLargeBuffer.value * 1, 7)
-        print(self.segments)
-        self.block_free(segment_id, start, size)
+        print("<<<<<<<<<<<<<<<<<<<<<<< Begin >>>>>>>>>>>>>>>>>>>>>>>")
+        print("=================== block1 malloc ===================")
+        block1 = self.block_malloc(Config.kLargeBuffer.value * 5, 10)
         print(self.segments)
 
-        print("====================================")
-        segment_id, start, size = self.block_malloc(Config.kLargeBuffer.value * 3, 15)
+        print("==================== block1 free ====================")
+        self.block_free(block1[0], block1[1], block1[2])
         print(self.segments)
-        self.block_free(segment_id, start, size)
+
+        print("=================== block2 malloc ===================")
+        block2 = self.block_malloc(Config.kLargeBuffer.value * 1, 12)
         print(self.segments)
+
+        print("=================== block3 malloc ===================")
+        block3 = self.block_malloc(Config.kLargeBuffer.value * 2, 17)
+        print(self.segments)
+
+        print("=================== block4 malloc ===================")
+        block4 = self.block_malloc(Config.kLargeBuffer.value * 1, 25)
+        print(self.segments)
+
+        print("==================== block4 free ====================")
+        self.block_free(block4[0], block4[1], block4[2])
+        print(self.segments)
+
+        print("==================== block2 free ====================")
+        self.block_free(block2[0], block2[1], block2[2])
+        print(self.segments)
+
+        print("==================== block3 free ====================")
+        self.block_free(block3[0], block3[1], block3[2])
+        print(self.segments)
+
+        print("<<<<<<<<<<<<<<<<<<<<<<<< End >>>>>>>>>>>>>>>>>>>>>>>>")
+
+    def dump_segments(self):
+        for s in self.segments.keys():
+            print(s, self.segments[s])
+
+    def dump_block_pool(self):
+        for p in self.block_pool:
+            print(p)
 
     @staticmethod
     def format_size(size: int) -> str:
@@ -54,9 +84,26 @@ class AllocatorSim:
             return "{:.2f} GB".format(size / 1073741824)
 
     @staticmethod
-    def get_allocation_size(size: int) -> int:
+    def default_get_allocation_size(size: int) -> int:
         kRoundLarge = Config.kRoundLarge.value
         return kRoundLarge * int((size + kRoundLarge - 1) / kRoundLarge)
+
+    @staticmethod
+    def customized_get_allocation_size1(size: int) -> int:
+        count = 0
+        b_size = size
+        while b_size > 0:
+            b_size = int(b_size / 2)
+            count += 1
+        return pow(2, count)
+
+    @staticmethod
+    def customized_get_allocation_size2(size: int) -> int:
+        global max_block_size
+        return max_block_size
+
+    def get_allocation_size(self, size: int) -> int:
+        return self.customized_get_allocation_size2(size)
 
     @staticmethod
     def lower_bound(nums: list, target: int) -> int:
@@ -121,8 +168,8 @@ class AllocatorSim:
 
     @staticmethod
     def should_split(size: int, block_size: int) -> bool:
-        # if block_size - size > Config.kLargeBuffer.value:
-        if block_size - size > Config.kSmallSize.value:
+        if block_size - size > Config.kLargeBuffer.value:
+        # if block_size - size > Config.kSmallSize.value:
             return True
         else:
             return False
@@ -183,7 +230,8 @@ class AllocatorSim:
         predecessor = -1
         successor = -1
 
-        for s in self.segments[segment_id]:
+        segment_list = copy.deepcopy(self.segments[segment_id])
+        for s in segment_list:
             if s[0] == start and s[2] == size:
                 target = count
             if s[1] == start and s[3] == -1:
@@ -193,18 +241,18 @@ class AllocatorSim:
             count += 1
 
         if predecessor != -1:
-            start = self.segments[segment_id][predecessor][0]
-            size = size + self.segments[segment_id][predecessor][2]
-            self.block_pool.remove((segment_id, self.segments[segment_id][predecessor][2]))
-            self.segments[segment_id].remove(self.segments[segment_id][predecessor])
+            start = segment_list[predecessor][0]
+            size = size + segment_list[predecessor][2]
+            self.block_pool.remove((segment_id, segment_list[predecessor][2]))
+            self.segments[segment_id].remove(segment_list[predecessor])
         if successor != -1:
-            end = self.segments[segment_id][successor][1]
-            size = size + self.segments[segment_id][successor][2]
-            self.block_pool.remove((segment_id, self.segments[segment_id][successor][2]))
-            self.segments[segment_id].remove(self.segments[segment_id][successor])
+            end = segment_list[successor][1]
+            size = size + segment_list[successor][2]
+            self.block_pool.remove((segment_id, segment_list[successor][2]))
+            self.segments[segment_id].remove(segment_list[successor])
 
         if predecessor != -1 or successor != -1:
-            self.segments[segment_id].remove(self.segments[segment_id][target])
+            self.segments[segment_id].remove(segment_list[target])
             self.segments[segment_id].append([start, end, size, -1])
             self.block_pool.append((segment_id, size))
         else:
@@ -223,6 +271,8 @@ def get_large_blocks(path: str) -> dict:
         line = file.readline()
     file.close()
     # print(len(large_blocks))
+    global max_block_size
+    max_block_size = max([i for i in large_blocks.values()])
     return large_blocks
 
 
