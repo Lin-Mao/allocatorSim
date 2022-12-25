@@ -7,7 +7,6 @@
 
 #include <iostream>
 #include <set>
-#include <cassert>
 
 #include "allocatorUtils.h"
 #include "allocatorConfig.h"
@@ -38,6 +37,10 @@ private:
     bool release_cached_blocks();
 
     bool should_split(const Block* block, size_t size);
+
+    void free_block(Block* block);
+
+    size_t try_merge_blocks(Block* dst, Block* src, BlockPool& pool);
 
 public:
     allocatorSim();

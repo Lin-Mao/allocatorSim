@@ -3,6 +3,9 @@
  * @date 12/19/2022
 */
 
+#include <array>
+#include <cassert>
+
 #include "allocatorSim.h"
 
 allocatorSim::allocatorSim(){
@@ -161,6 +164,53 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
     return block;
 }
 
-void allocatorSim::free(Block* block) {
+size_t allocatorSim::try_merge_blocks(Block* dst, Block* src, BlockPool& pool) {
+  if (dst->prev == src) { // [src dst]
+    dst->ptr = src->ptr;
+    dst->prev = src->prev;
+    if (dst->prev) {
+      dst->prev->next = dst;
+    }
+  } else { // [dest src]
+    dst->next = src->next;
+    if (dst->next) {
+      dst->next->prev = dst;
+    }
+  }
+  const size_t subsumed_size = src->size;
+  dst->size += subsumed_size;
+  auto erased = pool.blocks.erase(src);
+  delete src;
 
+  return subsumed_size;
+}
+
+void allocatorSim::free_block(Block* block) {
+  size_t original_block_size = block->size;
+
+  auto& pool = *block->pool;
+  int64_t net_change_inactive_split_blocks = 0;
+  int64_t net_change_inactive_split_size = 0;
+
+  const std::array<Block*, 2> merge_candidates = {block->prev, block->next};
+
+  for (Block* merge_candidate : merge_candidates) {
+    const int64_t subsumed_size =
+        try_merge_blocks(block, merge_candidate, pool);
+    if (subsumed_size > 0) {
+      net_change_inactive_split_blocks -= 1;
+      net_change_inactive_split_size -= subsumed_size;
+    }
+  }
+
+  bool inserted = pool.blocks.insert(block).second;
+}
+
+void allocatorSim::free(Block* block) {
+  block->allocated = false;
+
+  auto orig_block_ptr = block->ptr;
+  auto orig_block_size = block->size;
+
+  free_block(block);
 }
