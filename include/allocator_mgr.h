@@ -4,8 +4,8 @@
 #include <map>
 #include <vector>
 
-#include "allocatorUtils.h"
-#include "allocatorSim.h"
+#include "allocator_utils.h"
+#include "allocator_sim.h"
 
 class allocatorMgr {
 private:

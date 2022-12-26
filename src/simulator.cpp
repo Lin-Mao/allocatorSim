@@ -5,8 +5,8 @@
 #include <vector>
 #include <tuple>
 
-#include "allocatorSim.h"
-#include "allocatorMgr.h"
+#include "allocator_sim.h"
+#include "allocator_mgr.h"
 
 typedef std::vector<std::tuple<uint64_t, uint64_t, size_t>> blockVector_t;
 

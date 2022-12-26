@@ -8,8 +8,8 @@
 #include <iostream>
 #include <set>
 
-#include "allocatorUtils.h"
-#include "allocatorConfig.h"
+#include "allocator_utils.h"
+#include "allocator_conf.h"
 
 class allocatorSim {
 private:

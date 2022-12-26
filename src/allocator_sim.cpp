@@ -6,7 +6,7 @@
 #include <array>
 #include <cassert>
 
-#include "allocatorSim.h"
+#include "allocator_sim.h"
 
 static bool BlockComparator(const Block* a, const Block* b) {
     if (a->stream != b->stream) {

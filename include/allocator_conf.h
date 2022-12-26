@@ -1,5 +1,5 @@
-#ifndef ALLOCATOR_CONFIG_H
-#define ALLOCATOR_CONFIG_H
+#ifndef ALLOCATOR_CFG_H
+#define ALLOCATOR_CFG_H
 
 #include <cstddef>
 #include <atomic>
@@ -36,4 +36,4 @@ private:
     std::atomic<double> m_garbage_collection_threshold;
 };
 
-#endif // ALLOCATOR_CONFIG_H
+#endif // ALLOCATOR_CFG_H
