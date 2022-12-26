@@ -33,10 +33,10 @@ void allocatorSim::test_allocator() {
 size_t allocatorSim::round_size(size_t size) {
     if (size < kMinBlockSize) {
         return kMinBlockSize;
-    } else if (size > allocator_config.roundup_bypass_threshold()) {
+    } else if (size > allocatorConf::get_roundup_bypass_threshold()) {
         return kMinBlockSize * ((size + kMinBlockSize - 1) / kMinBlockSize);
     } else {
-        auto divisions = allocator_config.roundup_power2_divisions();
+        auto divisions = allocatorConf::get_roundup_power2_divisions();
         if (divisions > 0 && size > (kMinBlockSize * divisions)) {
         // return roundup_power2_next_division(size, divisions);
         // not taken
@@ -70,10 +70,10 @@ bool allocatorSim::get_free_block(AllocParams& p) {
     auto it = pool.blocks.lower_bound(&p.search_key);
     if (it == pool.blocks.end() || (*it)->stream != p.stream())
         return false;
-    if ((p.size() >= allocator_config.max_split_size()) &&
+    if ((p.size() >= allocatorConf::get_max_split_size()) &&
         ((*it)->size >= p.size() + kLargeBuffer))
         return false;
-    if ((p.size() >= allocator_config.max_split_size()) &&
+    if ((p.size() >= allocatorConf::get_max_split_size()) &&
         ((*it)->size >= p.size() + kLargeBuffer))
         return false;
     p.block = *it;
@@ -112,7 +112,7 @@ bool allocatorSim::should_split(const Block* block, size_t size) {
     if (block->pool->is_small) {
         return remaining >= kMinBlockSize;
     } else {
-        return (size < allocator_config.max_split_size()) &&
+        return (size < allocatorConf::get_max_split_size()) &&
             (remaining > kSmallSize);
     }
 }
@@ -129,7 +129,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
 
     if (!block_found) {
         // Do garbage collection if the flag is set.
-        if (UNLIKELY(allocator_config.garbage_collection_threshold() > 0.0)) {
+        if (UNLIKELY(allocatorConf::get_garbage_collection_threshold() > 0.0)) {
             garbage_collect_cached_blocks();
         }
         // Attempt allocate
