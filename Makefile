@@ -7,8 +7,14 @@ CUR_DIR := $(shell pwd)
 
 CXX ?=
 
-CFLAGS := -std=c++17
+CFLAGS := -std=c++17 -Wall
 LDFLAGS ?=
+
+ifdef DEBUG
+CFLAGS += -g -O0
+else
+CFLAGS += -O3
+endif
 
 SRCS := $(notdir $(wildcard $(SRC_DIR)*.cpp))
 OBJS := $(addprefix $(OBJ_DIR), $(patsubst %.cpp, %.o, $(SRCS)))
