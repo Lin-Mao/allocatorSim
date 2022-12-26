@@ -43,7 +43,8 @@ int main() {
 
     std::for_each(input_block_list.begin(), input_block_list.end(),
     [] (std::tuple<size_t, size_t, size_t> i) {
-        std::cout << std::get<0>(i) << ", " << std::get<1>(i) << ", " << std::get<2>(i) << std::endl;
+        std::cout << std::get<0>(i) << ", " << std::get<1>(i) << ", "
+                  << std::get<2>(i) << std::endl;
     });
 
     return 0;
