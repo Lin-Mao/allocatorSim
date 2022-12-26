@@ -143,17 +143,6 @@ struct AllocatorStats {
     StateAarry reserved_bytes;
 };
 
-
-static bool BlockComparator(const Block* a, const Block* b) {
-    if (a->stream != b->stream) {
-        return (uintptr_t)a->stream < (uintptr_t)b->stream;
-    }
-    if (a->size != b->size) {
-        return a->size < b->size;
-    }
-    return (uintptr_t)a->ptr < (uintptr_t)b->ptr;
-}
-
 std::string format_size(uint64_t size);
 
 #endif // ALLOCATOR_UTILS_H
