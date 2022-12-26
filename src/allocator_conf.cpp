@@ -1,5 +1,4 @@
 #include "allocator_conf.h"
-#include <limits>
 
 size_t allocatorConf::m_max_split_size = std::numeric_limits<size_t>::max();
 
@@ -9,9 +8,9 @@ size_t allocatorConf::m_roundup_bypass_threshold = std::numeric_limits<size_t>::
 
 double allocatorConf::m_garbage_collection_threshold = 0;
 
-size_t allocatorConf::m_memory_segment_address_start = 100;
+uint64_t allocatorConf::m_memory_segment_address_start = 1000;
 
-size_t allocatorConf::m_memory_segment_address_interval = 100;
+uint64_t allocatorConf::m_memory_segment_address_interval = 1000;
 
 
 size_t allocatorConf::get_max_split_size() {
@@ -30,10 +29,10 @@ double allocatorConf::get_garbage_collection_threshold() {
     return m_garbage_collection_threshold;
 }
 
-size_t allocatorConf::get_memory_segment_address_start() {
+uint64_t allocatorConf::get_memory_segment_address_start() {
     return m_memory_segment_address_start;
 }
 
-size_t allocatorConf::get_memory_segment_address_interval() {
+uint64_t allocatorConf::get_memory_segment_address_interval() {
     return m_memory_segment_address_interval;
 }

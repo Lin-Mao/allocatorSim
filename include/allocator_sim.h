@@ -14,7 +14,9 @@ class allocatorSim {
 private:
     BlockPool small_blocks;
     BlockPool large_blocks;
-    size_t segment_address = allocatorConf::get_memory_segment_address_start();
+    uint64_t segment_address = allocatorConf::get_memory_segment_address_start();
+    size_t max_reserved_bytes;
+    size_t max_allocated_bytes;
 
 private:
     size_t round_size(size_t ori_size);

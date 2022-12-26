@@ -1,6 +1,6 @@
 #include "allocator_utils.h"
 
-inline std::string format_size(uint64_t size) {
+std::string format_size(size_t size) {
     std::ostringstream os;
     os.precision(2);
     os << std::fixed;

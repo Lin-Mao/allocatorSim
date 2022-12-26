@@ -16,19 +16,6 @@
 #define LIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 1))
 #define UNLIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 0))
 
-// all sizes are rounded to at least 512 bytes
-constexpr size_t kMinBlockSize =512;
-// largest "small" allocation is 1 MiB
-constexpr size_t kSmallSize = 1048576;
-// "small" allocations are packed in 2 MiB blocks
-constexpr size_t kSmallBuffer = 2097152;
-// "large" allocations may be packed in 20 MiB blocks
-constexpr size_t kLargeBuffer = 20971520;
-// allocations between 1 and 10 MiB may use kLargeBuffer
-constexpr size_t kMinLargeAlloc = 10485760;
-// round up large allocations to 2 MiB
-constexpr size_t kRoundLarge = 2097152;
-
 struct Block;
 struct BlockPool;
 struct AllocParams;
@@ -45,7 +32,7 @@ struct Block {
     std::set<size_t> stream_uses; // streams on which the block was used
     size_t size; // block size in bytes
     BlockPool* pool; // owning memory pool
-    void* ptr; // memory address
+    uint64_t ptr; // memory address
     bool allocated; // in-use flag
     Block* prev; // prev block if split from a larger allocation
     Block* next; // next block if split from a larger allocation
@@ -58,7 +45,7 @@ struct Block {
         int stream,
         size_t size,
         BlockPool* pool,
-        void* ptr)
+        uint64_t ptr)
         : device(device),
             stream(stream),
             stream_uses(),
@@ -78,7 +65,7 @@ struct Block {
             stream_uses(),
             size(size),
             pool(nullptr),
-            ptr(nullptr),
+            ptr(0),
             allocated(0),
             prev(nullptr),
             next(nullptr),
@@ -250,6 +237,6 @@ struct MemoryRange {
   }
 };
 
-std::string format_size(uint64_t size);
+std::string format_size(size_t size);
 
 #endif // ALLOCATOR_UTILS_H

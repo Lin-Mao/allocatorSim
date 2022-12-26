@@ -18,12 +18,16 @@ static bool BlockComparator(const Block* a, const Block* b) {
     return (uintptr_t)a->ptr < (uintptr_t)b->ptr;
 }
 
-allocatorSim::allocatorSim(){
+allocatorSim::allocatorSim() : max_reserved_bytes(0), max_allocated_bytes(0) {
     small_blocks = BlockPool(BlockComparator, true);
     large_blocks = BlockPool(BlockComparator, false);
 }
 
 allocatorSim::~allocatorSim() {
+    std::cout << "Max allocated size: " << max_allocated_bytes << " B ("
+              << format_size(max_allocated_bytes) << ")" << std::endl;
+    std::cout << "Max reserved size: " << max_reserved_bytes << " B ("
+              << format_size(max_reserved_bytes) << ")" << std::endl;
 }
 
 void allocatorSim::test_allocator() {
@@ -93,7 +97,11 @@ void allocatorSim::garbage_collect_cached_blocks() {
 
 bool allocatorSim::alloc_block(AllocParams& p, bool isRetry) {
     size_t size = p.alloc_size;
-    p.block = new Block(p.device(), p.stream(), size, p.pool, nullptr);
+    uint64_t ptr = segment_address;
+    p.block = new Block(p.device(), p.stream(), size, p.pool, ptr);
+
+    segment_address += size + allocatorConf::get_memory_segment_address_interval();
+    max_reserved_bytes += size;
     return true;
 }
 
@@ -145,6 +153,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
     if (!block_found) {
         // OOM
         assert(block_found);
+        assert(params.block != nullptr && params.block->ptr != 0);
     }
 
     Block* block = params.block;
@@ -154,6 +163,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
 
     if (should_split(block, size)) {
         remaining = block;
+
         block = new Block(device, stream, size, &pool, block->ptr);
         block->prev = remaining->prev;
         if (block->prev) {
@@ -162,7 +172,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
         block->next = remaining;
 
         remaining->prev = block;
-        // remaining->ptr = static_cast<char*>(remaining->ptr) + size;
+        remaining->ptr = remaining->ptr + static_cast<uint64_t>(size);
         remaining->size -= size;
         bool inserted = pool.blocks.insert(remaining).second;
 
@@ -180,7 +190,7 @@ size_t allocatorSim::try_merge_blocks(Block* dst, Block* src, BlockPool& pool) {
     }
 
     if (dst->prev == src) { // [src dst]
-        // dst->ptr = src->ptr;
+        dst->ptr = src->ptr;
         dst->prev = src->prev;
         if (dst->prev) {
             dst->prev->next = dst;
