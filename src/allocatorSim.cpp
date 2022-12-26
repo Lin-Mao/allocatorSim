@@ -45,7 +45,6 @@ BlockPool& allocatorSim::get_pool(size_t size, int stream) {
     }
 }
 
-
 size_t allocatorSim::get_allocation_size(size_t size) {
     if (size <= kSmallSize) {
         return kSmallBuffer;
@@ -153,7 +152,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
         block->next = remaining;
 
         remaining->prev = block;
-        remaining->ptr = static_cast<char*>(remaining->ptr) + size;
+        // remaining->ptr = static_cast<char*>(remaining->ptr) + size;
         remaining->size -= size;
         bool inserted = pool.blocks.insert(remaining).second;
     }
@@ -164,8 +163,12 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
 }
 
 size_t allocatorSim::try_merge_blocks(Block* dst, Block* src, BlockPool& pool) {
+    if (!src || src->allocated) {
+        return 0;
+    }
+
     if (dst->prev == src) { // [src dst]
-        dst->ptr = src->ptr;
+        // dst->ptr = src->ptr;
         dst->prev = src->prev;
         if (dst->prev) {
             dst->prev->next = dst;

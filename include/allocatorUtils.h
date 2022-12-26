@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <set>
 #include <memory>
+#include <sstream>
 
 #define LIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 1))
 #define UNLIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 0))
@@ -119,6 +120,30 @@ struct AllocParams {
     Block* block;
 };
 
+struct State {
+    int64_t current = 0;
+    int64_t peak = 0;
+    int64_t allocated = 0;
+    int64_t freed = 0;
+};
+
+enum struct StateType : size_t {
+    AGGREGATE = 0,
+    SMALL_POOL = 1,
+    LARGE_POOL = 2,
+    NUM_TYPES = 3
+};
+
+typedef std::array<State, static_cast<size_t>(StateType::NUM_TYPES)> StateAarry;
+
+struct AllocatorStats {
+    StateAarry blocks;
+    StateAarry segments;
+    StateAarry allocated_bytes;
+    StateAarry reserved_bytes;
+};
+
+
 static bool BlockComparator(const Block* a, const Block* b) {
     if (a->stream != b->stream) {
         return (uintptr_t)a->stream < (uintptr_t)b->stream;
@@ -129,6 +154,6 @@ static bool BlockComparator(const Block* a, const Block* b) {
     return (uintptr_t)a->ptr < (uintptr_t)b->ptr;
 }
 
-static bool BlockComparator(const Block* a, const Block* b);
+std::string format_size(uint64_t size);
 
 #endif // ALLOCATOR_UTILS_H
