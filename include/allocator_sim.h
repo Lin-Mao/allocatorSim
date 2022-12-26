@@ -6,7 +6,6 @@
 #define ALLOCATOR_SIM_H
 
 #include <iostream>
-#include <set>
 
 #include "allocator_utils.h"
 #include "allocator_conf.h"
@@ -16,6 +15,7 @@ private:
     BlockPool small_blocks;
     BlockPool large_blocks;
     allocatorConfig allocator_config;
+    size_t memory_address = 1;
 
 private:
     size_t round_size(size_t ori_size);

@@ -2,7 +2,6 @@
 #include <fstream>
 #include <algorithm>
 #include <string>
-#include <vector>
 #include <tuple>
 
 #include "allocator_sim.h"

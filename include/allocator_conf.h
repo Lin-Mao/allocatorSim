@@ -1,3 +1,6 @@
+/**
+ * Configurations of allocator.
+*/
 #ifndef ALLOCATOR_CFG_H
 #define ALLOCATOR_CFG_H
 

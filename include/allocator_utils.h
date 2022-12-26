@@ -1,9 +1,15 @@
+/**
+ * Utilities (struct, datatype, common function definition) of allocator.
+*/
 #ifndef ALLOCATOR_UTILS_H
 #define ALLOCATOR_UTILS_H
 
 #include <cstddef>
 #include <cstdint>
 #include <set>
+#include <map>
+#include <vector>
+#include <array>
 #include <memory>
 #include <sstream>
 
@@ -26,6 +32,10 @@ constexpr size_t kRoundLarge = 2097152;
 struct Block;
 struct BlockPool;
 struct AllocParams;
+struct Status;
+struct OpInfo;
+struct BlockInfo;
+struct SegmentInfo;
 
 typedef bool (*Comparison)(const Block*, const Block*);
 
@@ -120,27 +130,124 @@ struct AllocParams {
     Block* block;
 };
 
-struct State {
+struct Status {
     int64_t current = 0;
     int64_t peak = 0;
     int64_t allocated = 0;
     int64_t freed = 0;
 };
 
-enum struct StateType : size_t {
+enum struct StatusType : size_t {
     AGGREGATE = 0,
     SMALL_POOL = 1,
     LARGE_POOL = 2,
     NUM_TYPES = 3
 };
 
-typedef std::array<State, static_cast<size_t>(StateType::NUM_TYPES)> StateAarry;
+typedef std::array<Status, static_cast<size_t>(StatusType::NUM_TYPES)> StatusAarry;
 
-struct AllocatorStats {
-    StateAarry blocks;
-    StateAarry segments;
-    StateAarry allocated_bytes;
-    StateAarry reserved_bytes;
+struct OpInfo {
+  uint64_t op_id;
+  bool is_alloc;  // true: segment alloc, false: block alloc
+  bool is_free;
+  bool is_release;
+  bool is_split;
+
+  size_t allocated_size;
+  size_t max_allocated_size;
+  size_t reserved_size;
+  size_t max_reserved_size;
+
+  float utilization_ratio;
+  float fragmentation;
+
+  OpInfo() = default;
+
+  OpInfo(
+    uint64_t op_id,
+    bool is_alloc,
+    bool is_free,
+    bool is_release,
+    bool is_split,
+    size_t allocated_size,
+    size_t max_allocated_size,
+    size_t reserved_size,
+    size_t max_reserved_size)
+    : 
+    op_id(op_id),
+    is_alloc(is_alloc),
+    is_free(is_free),
+    is_release(is_release),
+    is_split(is_split),
+    allocated_size(allocated_size),
+    max_allocated_size(max_allocated_size),
+    reserved_size(reserved_size),
+    max_reserved_size(max_reserved_size),
+    utilization_ratio(((float)allocated_size) / reserved_size),
+    fragmentation(0){}
+};
+
+
+struct BlockInfo {
+  size_t size;
+  size_t address;
+  bool allocated;
+
+  BlockInfo() = default;
+
+  BlockInfo(size_t size, size_t address, bool allocated)
+            : size(size), address(address), allocated(allocated) {}
+};
+
+struct SegmentInfo {
+  uint64_t op_id;
+  size_t address;
+  size_t total_size;
+  Block* first_block;
+
+  size_t allocated_size;
+  size_t largest_freed_size;  // for fragmentation
+  size_t num_blocks;
+  size_t num_allocated_blocks;
+
+  float fragmentation;
+
+  std::vector<size_t> empty_range;
+
+  SegmentInfo() = default;
+
+  SegmentInfo(
+    uint64_t op_id,
+    size_t address,
+    size_t total_size,
+    Block* first_block)
+    :
+    op_id(op_id),
+    address(address),
+    total_size(total_size),
+    first_block(first_block),
+    allocated_size(0),
+    largest_freed_size(0),
+    num_blocks(0),
+    num_allocated_blocks(0),
+    fragmentation(0) { empty_range = std::vector<size_t>(); }
+
+    bool operator<(const SegmentInfo& other) const {
+        return this->op_id < other.op_id;
+    }
+};
+
+struct MemoryRange {
+  size_t start;
+  size_t end;
+
+  MemoryRange() = default;
+
+  MemoryRange(size_t start, size_t end) : start(start), end(end) {}
+
+  bool operator<(const MemoryRange &other) const {
+    return this->start < other.start;
+  }
 };
 
 std::string format_size(uint64_t size);
