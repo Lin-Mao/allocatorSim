@@ -23,6 +23,7 @@ struct Status;
 struct OpInfo;
 struct BlockInfo;
 struct SegmentInfo;
+struct MemoryRange;
 
 typedef bool (*Comparison)(const Block*, const Block*);
 
@@ -122,102 +123,115 @@ struct Status {
     int64_t peak = 0;
     int64_t allocated = 0;
     int64_t freed = 0;
-};
 
-enum struct StatusType : size_t {
-    AGGREGATE = 0,
-    SMALL_POOL = 1,
-    LARGE_POOL = 2,
-    NUM_TYPES = 3
-};
+    Status() = default;
 
-typedef std::array<Status, static_cast<size_t>(StatusType::NUM_TYPES)> StatusAarry;
+    Status(int64_t current, int64_t peak, int64_t allocated, int64_t freed)
+        : current(current), peak(peak), allocated(allocated), freed(freed) {}
+
+    Status(const Status& other)
+        : Status(other.current, other.peak, other.allocated, other.freed) {}
+};
 
 struct OpInfo {
-  uint64_t op_id;
-  bool is_alloc;  // true: segment alloc, false: block alloc
-  bool is_free;
-  bool is_release;
-  bool is_split;
+    uint64_t op_id;
+    bool is_alloc;  // true: segment alloc, false: block alloc
+    bool is_free;
+    bool is_release;
+    bool is_split;
 
-  size_t allocated_size;
-  size_t max_allocated_size;
-  size_t reserved_size;
-  size_t max_reserved_size;
+    size_t allocated_size;
+    size_t max_allocated_size;
+    size_t reserved_size;
+    size_t max_reserved_size;
 
-  float utilization_ratio;
-  float fragmentation;
+    float utilization_ratio;
+    float fragmentation;
 
-  OpInfo() = default;
+    OpInfo() = default;
 
-  OpInfo(
-    uint64_t op_id,
-    bool is_alloc,
-    bool is_free,
-    bool is_release,
-    bool is_split,
-    size_t allocated_size,
-    size_t max_allocated_size,
-    size_t reserved_size,
-    size_t max_reserved_size)
-    : 
-    op_id(op_id),
-    is_alloc(is_alloc),
-    is_free(is_free),
-    is_release(is_release),
-    is_split(is_split),
-    allocated_size(allocated_size),
-    max_allocated_size(max_allocated_size),
-    reserved_size(reserved_size),
-    max_reserved_size(max_reserved_size),
-    utilization_ratio(((float)allocated_size) / reserved_size),
-    fragmentation(0){}
+    OpInfo(
+        uint64_t op_id,
+        bool is_alloc,
+        bool is_free,
+        bool is_release,
+        bool is_split,
+        size_t allocated_size,
+        size_t max_allocated_size,
+        size_t reserved_size,
+        size_t max_reserved_size)
+        : 
+        op_id(op_id),
+        is_alloc(is_alloc),
+        is_free(is_free),
+        is_release(is_release),
+        is_split(is_split),
+        allocated_size(allocated_size),
+        max_allocated_size(max_allocated_size),
+        reserved_size(reserved_size),
+        max_reserved_size(max_reserved_size),
+        utilization_ratio(((float)allocated_size) / reserved_size),
+        fragmentation(0){}
 };
 
 
 struct BlockInfo {
-  size_t size;
-  size_t address;
-  bool allocated;
+    size_t size;
+    uint64_t address;
+    bool allocated;
 
-  BlockInfo() = default;
+    BlockInfo() = default;
 
-  BlockInfo(size_t size, size_t address, bool allocated)
-            : size(size), address(address), allocated(allocated) {}
+    BlockInfo(size_t size, uint64_t address, bool allocated)
+                : size(size), address(address), allocated(allocated) {}
 };
 
 struct SegmentInfo {
-  uint64_t op_id;
-  size_t address;
-  size_t total_size;
-  Block* first_block;
+    uint64_t op_id;
+    uint64_t address;
+    size_t total_size;
+    Block* first_block;
 
-  size_t allocated_size;
-  size_t largest_freed_size;  // for fragmentation
-  size_t num_blocks;
-  size_t num_allocated_blocks;
+    size_t allocated_size;
+    size_t largest_freed_size;  // for fragmentation
+    size_t num_blocks;
+    size_t num_allocated_blocks;
 
-  float fragmentation;
+    float fragmentation;
 
-  std::vector<size_t> empty_range;
+    std::vector<size_t> empty_range;
 
-  SegmentInfo() = default;
 
-  SegmentInfo(
-    uint64_t op_id,
-    size_t address,
-    size_t total_size,
-    Block* first_block)
-    :
-    op_id(op_id),
-    address(address),
-    total_size(total_size),
-    first_block(first_block),
-    allocated_size(0),
-    largest_freed_size(0),
-    num_blocks(0),
-    num_allocated_blocks(0),
-    fragmentation(0) { empty_range = std::vector<size_t>(); }
+    SegmentInfo() = default;
+
+    SegmentInfo(
+        uint64_t op_id,
+        uint64_t address,
+        size_t total_size,
+        Block* first_block)
+        :
+        op_id(op_id),
+        address(address),
+        total_size(total_size),
+        first_block(first_block),
+        allocated_size(0),
+        largest_freed_size(0),
+        num_blocks(0),
+        num_allocated_blocks(0),
+        fragmentation(0) { empty_range = std::vector<size_t>(); }
+
+    SegmentInfo(const SegmentInfo& other)
+        : op_id(other.op_id),
+        address(other.address),
+        total_size(other.total_size),
+        first_block(other.first_block),
+        allocated_size(other.allocated_size),
+        largest_freed_size(other.largest_freed_size),
+        num_blocks(other.num_blocks),
+        num_allocated_blocks(other.num_allocated_blocks),
+        fragmentation(other.fragmentation),
+        empty_range(other.empty_range) {}
+
 
     bool operator<(const SegmentInfo& other) const {
         return this->op_id < other.op_id;
@@ -225,16 +239,16 @@ struct SegmentInfo {
 };
 
 struct MemoryRange {
-  size_t start;
-  size_t end;
+    size_t start;
+    size_t end;
 
-  MemoryRange() = default;
+    MemoryRange() = default;
 
-  MemoryRange(size_t start, size_t end) : start(start), end(end) {}
+    MemoryRange(size_t start, size_t end) : start(start), end(end) {}
 
-  bool operator<(const MemoryRange &other) const {
-    return this->start < other.start;
-  }
+    bool operator<(const MemoryRange &other) const {
+        return this->start < other.start;
+    }
 };
 
 std::string format_size(size_t size);

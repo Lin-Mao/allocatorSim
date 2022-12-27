@@ -9,6 +9,7 @@
 
 #include "allocator_utils.h"
 #include "allocator_conf.h"
+#include "allocator_prof.h"
 
 class allocatorSim {
 private:
@@ -16,7 +17,11 @@ private:
     BlockPool large_blocks;
     uint64_t segment_address = allocatorConf::get_memory_segment_address_start();
     size_t max_reserved_bytes;
+    size_t current_reserved_bytes;
     size_t max_allocated_bytes;
+    size_t current_allocated_bytes;
+
+    allocatorProf* allocator_prof;
 
 private:
     size_t round_size(size_t ori_size);

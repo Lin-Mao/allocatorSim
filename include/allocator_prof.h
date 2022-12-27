@@ -14,29 +14,62 @@
 
 #include "allocator_utils.h"
 
-struct AllocatorStatus {
-    StatusAarry blocks;
-    StatusAarry segments;
-    StatusAarry allocated_bytes;
-    StatusAarry reserved_bytes;
+#include <fstream>
+
+struct AllocatorInfo {
+    Status blocks;
+    Status segments;
+    Status allocated_bytes;
+    Status reserved_bytes;
+
+    AllocatorInfo() = default;
+
+    AllocatorInfo(Status blocks, Status segments, Status allocated_bytes,
+        Status reserved_bytes)
+        : blocks(blocks), segments(segments), allocated_bytes(allocated_bytes),
+        reserved_bytes(reserved_bytes) {}
+
+    AllocatorInfo(const AllocatorInfo& other)
+        : AllocatorInfo(other.blocks, other.segments, other.allocated_bytes,
+        other.reserved_bytes) {}
 };
+
+typedef std::map<SegmentInfo, std::vector<BlockInfo>> SnapShot;
 
 class allocatorProf {
 private:
     uint64_t op_id = 0;
 
-    AllocatorStatus allocator_status;
+    AllocatorInfo allocator_info;
+
+    SnapShot allocator_snapshot;
     
-    std::map<MemoryRange, std::shared_ptr<SegmentInfo>> memory_segments;
+    std::map<MemoryRange, SegmentInfo> memory_segments;
+
+    std::map<size_t ,SnapShot> allocator_snapshot_history;
+
+    std::vector<OpInfo> op_list;
+
+    std::vector<AllocatorInfo> allocator_info_history;
+
+private:
+
+    void update_status(Status& stat, int64_t amount);
+
+    void update_block_change(Block* block, const MemoryRange range, SegmentInfo& segment);
+
+    MemoryRange locate_segment(Block* block);
+
+    void dump_allocator_snapshot_history(std::string filename);
 
 public:
     allocatorProf();
 
-    void update_segment_allocate(Block* block, size_t size);
+    ~allocatorProf();
+
+    void update_segment_create(Block* block, size_t size);
 
     void update_segment_release(Block* block);
-
-    void update_block_change();
 
     void update_block_allocate(Block* block);
 

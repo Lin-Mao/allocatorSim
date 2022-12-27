@@ -37,6 +37,7 @@ std::tuple<uint64_t, uint64_t> process_trace(std::string filename, blockVector_t
         auto vec = split_line(line, " ");
         block_list.push_back(std::make_tuple(vec[0], vec[1], vec[2]));
     }
+    file.close();
 
     uint64_t min = std::numeric_limits<uint64_t>::max();
     uint64_t max = 0;
@@ -76,8 +77,8 @@ void run_allocator(const blockVector_t& block_list, const uint64_t min, const ui
 }
 
 int main() {
-    allocatorSim allocSim;
-    allocSim.test_allocator();
+    // allocatorSim allocSim;
+    // allocSim.test_allocator();
 
     blockVector_t input_block_list;
     uint64_t min, max;

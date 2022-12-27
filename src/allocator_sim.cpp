@@ -18,9 +18,15 @@ static bool BlockComparator(const Block* a, const Block* b) {
     return (uintptr_t)a->ptr < (uintptr_t)b->ptr;
 }
 
-allocatorSim::allocatorSim() : max_reserved_bytes(0), max_allocated_bytes(0) {
+allocatorSim::allocatorSim()
+    : max_reserved_bytes(0),
+    current_reserved_bytes(0),
+    max_allocated_bytes(0),
+    current_allocated_bytes(0) {
     small_blocks = BlockPool(BlockComparator, true);
     large_blocks = BlockPool(BlockComparator, false);
+
+    allocator_prof = new allocatorProf();
 }
 
 allocatorSim::~allocatorSim() {
@@ -28,6 +34,8 @@ allocatorSim::~allocatorSim() {
               << format_size(max_allocated_bytes) << ")" << std::endl;
     std::cout << "Max reserved size: " << max_reserved_bytes << " B ("
               << format_size(max_reserved_bytes) << ")" << std::endl;
+
+    delete allocator_prof;
 }
 
 void allocatorSim::test_allocator() {
@@ -101,7 +109,9 @@ bool allocatorSim::alloc_block(AllocParams& p, bool isRetry) {
     p.block = new Block(p.device(), p.stream(), size, p.pool, ptr);
 
     segment_address += size + allocatorConf::get_memory_segment_address_interval();
-    max_reserved_bytes += size;
+    current_reserved_bytes += size;
+    max_reserved_bytes = std::max(current_reserved_bytes, max_reserved_bytes);
+
     return true;
 }
 
@@ -176,10 +186,13 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
         remaining->size -= size;
         bool inserted = pool.blocks.insert(remaining).second;
 
-        assert(!inserted);
+        assert(inserted);
     }
 
     block->allocated = true;
+
+    current_allocated_bytes += block->size;
+    max_allocated_bytes = std::max(current_allocated_bytes, max_allocated_bytes);
 
     return block;
 }
@@ -204,7 +217,7 @@ size_t allocatorSim::try_merge_blocks(Block* dst, Block* src, BlockPool& pool) {
     const size_t subsumed_size = src->size;
     dst->size += subsumed_size;
     auto erased = pool.blocks.erase(src);
-    assert(!erased);
+    assert(erased);
     delete src;
 
     return subsumed_size;
@@ -228,14 +241,16 @@ void allocatorSim::free_block(Block* block) {
     }
 
     bool inserted = pool.blocks.insert(block).second;
-    assert(!inserted);
+    assert(inserted);
 }
 
 void allocatorSim::free(Block* block) {
     block->allocated = false;
 
     // auto orig_block_ptr = block->ptr;
-    // auto orig_block_size = block->size;
+    auto orig_block_size = block->size;
 
     free_block(block);
+
+    current_allocated_bytes -= orig_block_size;
 }
