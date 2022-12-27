@@ -101,11 +101,11 @@ void allocatorProf::update_block_allocate(Block* block) {
     op_id++;
 }
 
-void allocatorProf::update_block_free(Block* block) {
+void allocatorProf::update_block_free(Block* block, size_t size) {
     ALLOCATOR_PROF_ENABLE();
 
     update_status(allocator_info.blocks, -1);
-    update_status(allocator_info.allocated_bytes, block->size);
+    update_status(allocator_info.allocated_bytes, size);
     auto range = locate_segment(block);
     auto& segment = memory_segments.at(range);
 

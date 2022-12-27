@@ -38,6 +38,8 @@ private:
 
     bool alloc_block(AllocParams& p, bool isRetry);
 
+    void release_block(Block* block);
+
     bool release_available_cached_blocks(AllocParams& p);
 
     bool release_cached_blocks();

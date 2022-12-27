@@ -115,6 +115,10 @@ bool allocatorSim::alloc_block(AllocParams& p, bool isRetry) {
     return true;
 }
 
+void allocatorSim::release_block(Block* block) {
+    allocator_prof->update_segment_release(block);
+}
+
 bool allocatorSim::release_available_cached_blocks(AllocParams& p) {
     // @todo(Lin-Mao): todo
     return false;
@@ -158,6 +162,10 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
                 alloc_block(params, false))
             // Free all non-split cached blocks and retry alloc.
             || (release_cached_blocks() && alloc_block(params, true));
+
+        if (block_found) {
+            allocator_prof->update_segment_create(params.block, alloc_size);
+        }
     }
 
     if (!block_found) {
@@ -193,6 +201,8 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
 
     current_allocated_bytes += block->size;
     max_allocated_bytes = std::max(current_allocated_bytes, max_allocated_bytes);
+
+    allocator_prof->update_block_allocate(block);
 
     return block;
 }
@@ -253,4 +263,7 @@ void allocatorSim::free(Block* block) {
     free_block(block);
 
     current_allocated_bytes -= orig_block_size;
+
+    // block is used to decide segment, keep size.
+    allocator_prof->update_block_free(block, orig_block_size);
 }

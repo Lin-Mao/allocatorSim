@@ -73,7 +73,7 @@ public:
 
     void update_block_allocate(Block* block);
 
-    void update_block_free(Block* block);
+    void update_block_free(Block* block, size_t size);
 };
 
 
