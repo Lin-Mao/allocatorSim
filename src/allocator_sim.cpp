@@ -43,24 +43,25 @@ void allocatorSim::test_allocator() {
 }
 
 size_t allocatorSim::round_size(size_t size) {
-    if (size < kMinBlockSize) {
-        return kMinBlockSize;
+    auto min_block_size = allocatorConf::get_kMinBlockSize();
+    if (size < min_block_size) {
+        return min_block_size;
     } else if (size > allocatorConf::get_roundup_bypass_threshold()) {
-        return kMinBlockSize * ((size + kMinBlockSize - 1) / kMinBlockSize);
+        return min_block_size * ((size + min_block_size - 1) / min_block_size);
     } else {
         auto divisions = allocatorConf::get_roundup_power2_divisions();
-        if (divisions > 0 && size > (kMinBlockSize * divisions)) {
+        if (divisions > 0 && size > (min_block_size * divisions)) {
         // return roundup_power2_next_division(size, divisions);
         // not taken
         return size;
         } else {
-        return kMinBlockSize * ((size + kMinBlockSize - 1) / kMinBlockSize);
+        return min_block_size * ((size + min_block_size - 1) / min_block_size);
         }
     }
 }
 
 BlockPool& allocatorSim::get_pool(size_t size, int stream) {
-    if (size <= kSmallSize) {
+    if (size <= allocatorConf::get_kSmallSize()) {
         return small_blocks;
     } else {
         return large_blocks;
@@ -68,12 +69,13 @@ BlockPool& allocatorSim::get_pool(size_t size, int stream) {
 }
 
 size_t allocatorSim::get_allocation_size(size_t size) {
-    if (size <= kSmallSize) {
-        return kSmallBuffer;
-    } else if (size < kMinLargeAlloc) {
-        return kLargeBuffer;
+    if (size <= allocatorConf::get_kSmallSize()) {
+        return allocatorConf::get_kSmallBuffer();
+    } else if (size < allocatorConf::get_kMinLargeAlloc()) {
+        return allocatorConf::get_kLargeBuffer();
     } else {
-        return kRoundLarge * ((size + kRoundLarge - 1) / kRoundLarge);
+        auto round_large = allocatorConf::get_kRoundLarge();
+        return round_large * ((size + round_large - 1) / round_large);
     }
 }
 
@@ -83,10 +85,10 @@ bool allocatorSim::get_free_block(AllocParams& p) {
     if (it == pool.blocks.end() || (*it)->stream != p.stream())
         return false;
     if ((p.size() >= allocatorConf::get_max_split_size()) &&
-        ((*it)->size >= p.size() + kLargeBuffer))
+        ((*it)->size >= p.size() + allocatorConf::get_kLargeBuffer()))
         return false;
     if ((p.size() >= allocatorConf::get_max_split_size()) &&
-        ((*it)->size >= p.size() + kLargeBuffer))
+        ((*it)->size >= p.size() + allocatorConf::get_kLargeBuffer()))
         return false;
     p.block = *it;
     (*it)->gc_count = 0; // Denote this block has been used
@@ -132,10 +134,10 @@ bool allocatorSim::release_cached_blocks() {
 bool allocatorSim::should_split(const Block* block, size_t size) {
     size_t remaining = block->size - size;
     if (block->pool->is_small) {
-        return remaining >= kMinBlockSize;
+        return remaining >= allocatorConf::get_kMinBlockSize();
     } else {
         return (size < allocatorConf::get_max_split_size()) &&
-            (remaining > kSmallSize);
+            (remaining > allocatorConf::get_kSmallSize());
     }
 }
 
