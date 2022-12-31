@@ -7,7 +7,7 @@
 #include "allocator_sim.h"
 #include "allocator_mgr.h"
 
-typedef std::vector<std::tuple<uint64_t, uint64_t, size_t>> blockVector_t;
+typedef std::map<uint64_t, std::pair<uint64_t, size_t>> blockMap_t;
 
 std::vector<size_t> split_line(std::string str, const std::string c) {
     std::vector<size_t> vec;
@@ -29,47 +29,39 @@ std::vector<size_t> split_line(std::string str, const std::string c) {
     return vec;
 }
 
-std::tuple<uint64_t, uint64_t> process_trace(std::string filename, blockVector_t& block_list) {
+std::pair<uint64_t, uint64_t> process_trace(std::string filename, blockMap_t& block_map) {
     std::ifstream file;
     file.open(filename);
     std::string line;
     while (getline(file, line)) {
         auto vec = split_line(line, " ");
-        block_list.push_back(std::make_tuple(vec[0], vec[1], vec[2]));
+        block_map.emplace(vec[0], std::make_pair(vec[1], vec[2]));
     }
     file.close();
 
     uint64_t min = std::numeric_limits<uint64_t>::max();
     uint64_t max = 0;
-    std::for_each(block_list.begin(), block_list.end(),
-    [&min, &max](std::tuple<uint64_t, uint64_t, size_t> t) {
-        if (std::get<0>(t) < min) {
-            min = std::get<0>(t);
+    std::for_each(block_map.begin(), block_map.end(),
+    [&min, &max](std::pair<uint64_t, std::pair<uint64_t, size_t>> p) {
+        if (std::get<0>(p) < min) {
+            min = std::get<0>(p);
         }
-        if (std::get<1>(t) > max) {
-            max = std::get<1>(t);
+        if (std::get<0>(std::get<1>(p)) > max) {
+            max = std::get<0>(std::get<1>(p));
         }
     });
 
-    /*
-    std::for_each(block_list.begin(), block_list.end(),
-    [] (std::tuple<size_t, size_t, size_t> i) {
-        std::cout << std::get<0>(i) << ", " << std::get<1>(i) << ", "
-                  << std::get<2>(i) << std::endl;
-    });
-    */
-    return std::make_tuple(min, max);
+    return std::make_pair(min, max);
 }
 
-void run_allocator(const blockVector_t& block_list, const uint64_t min, const uint64_t max) {
+void run_allocator(const blockMap_t& block_map, const uint64_t min, const uint64_t max) {
     allocatorMgr alloc_mgr;
 
-    uint64_t count = 0;
     for (uint64_t i = min; i <= max; i++) {
-        if (std::get<0>(block_list[count]) == i) {
-            auto ref = std::get<1>(block_list[count]) - std::get<0>(block_list[count]);
-            alloc_mgr.malloc_block(std::get<2>(block_list[count]), ref);
-            count++;
+        auto block = block_map.find(i);
+        if (block != block_map.end()) {
+            auto reference = std::get<0>(block->second) - block->first;
+            alloc_mgr.malloc_block(std::get<1>(block->second), reference);
         }
         alloc_mgr.update_block_reference();
         alloc_mgr.free_block();
@@ -80,10 +72,11 @@ int main() {
     // allocatorSim allocSim;
     // allocSim.test_allocator();
 
-    blockVector_t input_block_list;
+    std::string trace_file = "/home/lm/allocatorSim/output/baseline/sim_input.log";
+    blockMap_t input_block_map;
     uint64_t min, max;
-    std::tie(min, max) = process_trace("./input/small_block_test.log", input_block_list);
-    run_allocator(input_block_list, min, max);
+    std::tie(min, max) = process_trace(trace_file, input_block_map);
+    run_allocator(input_block_map, min, max);
 
     return 0;
 }
