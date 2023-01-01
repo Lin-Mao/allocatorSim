@@ -22,6 +22,8 @@ public:
 
     void free_block();
 
+    void empty_cache();
+
     size_t get_reserved_size();
 
     void reset_reserved_size();

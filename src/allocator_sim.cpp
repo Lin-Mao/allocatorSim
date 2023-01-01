@@ -119,6 +119,10 @@ bool allocatorSim::alloc_block(AllocParams& p, bool isRetry) {
 
 void allocatorSim::release_block(Block* block) {
     allocator_prof->update_segment_release(block);
+    current_reserved_bytes -= block->size;
+    auto* pool = block->pool;
+    pool->blocks.erase(block);
+    delete block;
 }
 
 bool allocatorSim::release_available_cached_blocks(AllocParams& p) {
@@ -127,8 +131,24 @@ bool allocatorSim::release_available_cached_blocks(AllocParams& p) {
 }
 
 bool allocatorSim::release_cached_blocks() {
-    // @todo(Lin-Mao): todo
-    return false;
+    // std::cout << "large blocks size(before): " << large_blocks.blocks.size() << std::endl;
+    // std::cout << "small blocks size(before): " << small_blocks.blocks.size() << std::endl;
+
+    // auto large_size = 0;
+    // for (auto b : large_blocks.blocks) {
+    //     large_size += b->size;
+    // }
+    // auto small_size = 0;
+    // for (auto b : small_blocks.blocks) {
+    //     small_size += b->size;
+    // }
+    // std::cout << "large size: " << large_size << ", small size: " << small_size
+    //           << ", total size: " << large_size + small_size << std::endl;
+
+    release_blocks(large_blocks);
+    release_blocks(small_blocks);
+
+    return true;
 }
 
 bool allocatorSim::should_split(const Block* block, size_t size) {
@@ -194,6 +214,12 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
         remaining->prev = block;
         remaining->ptr = remaining->ptr + static_cast<uint64_t>(size);
         remaining->size -= size;
+
+        auto iter = pool.blocks.find(remaining);
+        if (iter != pool.blocks.end()) {
+            std::cout << "iter != pool.blocks.end()" << std::endl;
+        }
+
         bool inserted = pool.blocks.insert(remaining).second;
 
         assert(inserted);
@@ -233,6 +259,17 @@ size_t allocatorSim::try_merge_blocks(Block* dst, Block* src, BlockPool& pool) {
     delete src;
 
     return subsumed_size;
+}
+
+void allocatorSim::release_blocks(BlockPool& pool) {
+    auto it = pool.blocks.begin();
+    while (it != pool.blocks.end()) {
+        Block* block = *it;
+        ++it;
+        if (!block->prev && !block->next) {
+            release_block(block);
+        }
+    }
 }
 
 void allocatorSim::free_block(Block* block) {

@@ -35,6 +35,10 @@ void allocatorMgr::free_block() {
     }
 }
 
+void allocatorMgr::empty_cache() {
+    alloc_sim.release_cached_blocks();
+}
+
 size_t allocatorMgr::get_reserved_size() {
     return alloc_sim.get_max_reserved_size();
 }

@@ -42,13 +42,13 @@ private:
 
     bool release_available_cached_blocks(AllocParams& p);
 
-    bool release_cached_blocks();
-
     bool should_split(const Block* block, size_t size);
 
     void free_block(Block* block);
 
     size_t try_merge_blocks(Block* dst, Block* src, BlockPool& pool);
+
+    void release_blocks(BlockPool& pool);
 
 public:
     allocatorSim();
@@ -60,6 +60,8 @@ public:
     Block* malloc(int device, size_t orig_size, int stream);
 
     void free(Block* block);
+
+    bool release_cached_blocks();
 
     size_t get_max_reserved_size();
 

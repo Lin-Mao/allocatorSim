@@ -32,7 +32,6 @@ typedef std::map<uint64_t, std::pair<uint64_t, size_t>> blockMap_t;
 struct Block {
     int device; // gpu
     int stream; // allocation stream
-    std::set<size_t> stream_uses; // streams on which the block was used
     size_t size; // block size in bytes
     BlockPool* pool; // owning memory pool
     uint64_t ptr; // memory address
@@ -51,7 +50,6 @@ struct Block {
         uint64_t ptr)
         : device(device),
             stream(stream),
-            stream_uses(),
             size(size),
             pool(pool),
             ptr(ptr),
@@ -65,7 +63,6 @@ struct Block {
     Block(int device, int stream, size_t size)
         : device(device),
             stream(stream),
-            stream_uses(),
             size(size),
             pool(nullptr),
             ptr(0),
