@@ -63,9 +63,9 @@ public:
 
     bool release_cached_blocks();
 
-    size_t get_max_reserved_size();
+    std::pair<size_t, size_t> get_max_memory_usage();
 
-    void reset_max_reserved_size();
+    void set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes);
 };
 
 #endif  // ALLOCATOR_SIM_H

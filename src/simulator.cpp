@@ -65,6 +65,7 @@ void run_allocator(const blockMap_t& block_map, const uint64_t min, const uint64
         alloc_mgr.update_block_reference();
         alloc_mgr.free_block();
     }
+    alloc_mgr.show_allocator_memory_usage();
 }
 
 void search_config(const blockMap_t& block_map, const uint64_t min, const uint64_t max) {
@@ -74,9 +75,6 @@ void search_config(const blockMap_t& block_map, const uint64_t min, const uint64
 }
 
 int main() {
-    // allocatorSim allocSim;
-    // allocSim.test_allocator();
-
     std::string trace_file = "/home/lm/allocatorSim/input/baseline/sim_input.log";
     blockMap_t input_block_map;
     uint64_t min, max;

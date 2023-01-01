@@ -30,10 +30,10 @@ allocatorSim::allocatorSim()
 }
 
 allocatorSim::~allocatorSim() {
-    std::cout << "Max allocated size: " << max_allocated_bytes << " B ("
-              << format_size(max_allocated_bytes) << ")" << std::endl;
-    std::cout << "Max reserved size: " << max_reserved_bytes << " B ("
-              << format_size(max_reserved_bytes) << ")" << std::endl;
+    // std::cout << "Max allocated size: " << max_allocated_bytes << " B ("
+    //           << format_size(max_allocated_bytes) << ")" << std::endl;
+    // std::cout << "Max reserved size: " << max_reserved_bytes << " B ("
+    //           << format_size(max_reserved_bytes) << ")" << std::endl;
 
     delete allocator_prof;
 }
@@ -307,10 +307,11 @@ void allocatorSim::free(Block* block) {
     allocator_prof->update_block_free(block, orig_block_size);
 }
 
-size_t allocatorSim::get_max_reserved_size() {
-    return max_reserved_bytes;
+std::pair<size_t, size_t> allocatorSim::get_max_memory_usage() {
+    return std::make_pair(max_allocated_bytes, max_reserved_bytes);
 }
 
-void allocatorSim::reset_max_reserved_size() {
-    max_reserved_bytes = 0;
+void allocatorSim::set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes) {
+    max_allocated_bytes = allocated_bytes;
+    max_reserved_bytes = reserved_bytes;
 }

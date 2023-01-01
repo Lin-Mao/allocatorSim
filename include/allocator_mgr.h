@@ -24,9 +24,11 @@ public:
 
     void empty_cache();
 
-    size_t get_reserved_size();
+    std::pair<size_t, size_t> get_allocator_memory_usage();
 
-    void reset_reserved_size();
+    void reset_allocator_memory_usage();
+
+    void show_allocator_memory_usage();
 
 };
 

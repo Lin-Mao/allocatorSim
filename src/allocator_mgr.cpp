@@ -39,10 +39,18 @@ void allocatorMgr::empty_cache() {
     alloc_sim.release_cached_blocks();
 }
 
-size_t allocatorMgr::get_reserved_size() {
-    return alloc_sim.get_max_reserved_size();
+std::pair<size_t, size_t> allocatorMgr::get_allocator_memory_usage() {
+    return alloc_sim.get_max_memory_usage();
 }
 
-void allocatorMgr::reset_reserved_size() {
-    alloc_sim.reset_max_reserved_size();
+void allocatorMgr::reset_allocator_memory_usage() {
+    alloc_sim.set_max_memory_usage(0, 0);
+}
+
+void allocatorMgr::show_allocator_memory_usage() {
+    auto memory_usage = get_allocator_memory_usage();
+    std::cout << "Max allocated size: " << memory_usage.first << " B ("
+              << format_size(memory_usage.first) << ")" << std::endl;
+    std::cout << "Max reserved size: " << memory_usage.second << " B ("
+              << format_size(memory_usage.second) << ")" << std::endl;
 }
