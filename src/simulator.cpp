@@ -6,6 +6,7 @@
 
 #include "allocator_sim.h"
 #include "allocator_mgr.h"
+#include "allocator_opt.h"
 
 std::vector<size_t> split_line(std::string str, const std::string c) {
     std::vector<size_t> vec;
@@ -19,7 +20,7 @@ std::vector<size_t> split_line(std::string str, const std::string c) {
         pos1 = pos2 + c.size();
         pos2 = str.find(c, pos1);
     }
-    
+
     if (pos1 != str.length()) {
         vec.push_back(std::stol(str.substr(pos1)));
     }
@@ -66,6 +67,12 @@ void run_allocator(const blockMap_t& block_map, const uint64_t min, const uint64
     }
 }
 
+void search_config(const blockMap_t& block_map, const uint64_t min, const uint64_t max) {
+    allocatorOpt alloc_opt(block_map, max, min);
+
+    alloc_opt.search_configs();
+}
+
 int main() {
     // allocatorSim allocSim;
     // allocSim.test_allocator();
@@ -74,7 +81,8 @@ int main() {
     blockMap_t input_block_map;
     uint64_t min, max;
     std::tie(min, max) = process_trace(trace_file, input_block_map);
-    run_allocator(input_block_map, min, max);
+    // run_allocator(input_block_map, min, max);
+    search_config(input_block_map, min, max);
 
     return 0;
 }

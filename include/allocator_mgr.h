@@ -22,6 +22,10 @@ public:
 
     void free_block();
 
+    size_t get_reserved_size();
+
+    void reset_reserved_size();
+
 };
 
 

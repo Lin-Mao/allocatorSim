@@ -269,3 +269,11 @@ void allocatorSim::free(Block* block) {
     // block is used to decide segment, keep size.
     allocator_prof->update_block_free(block, orig_block_size);
 }
+
+size_t allocatorSim::get_max_reserved_size() {
+    return max_reserved_bytes;
+}
+
+void allocatorSim::reset_max_reserved_size() {
+    max_reserved_bytes = 0;
+}

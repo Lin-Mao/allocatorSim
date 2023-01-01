@@ -4,7 +4,7 @@
 #ifndef ALLOCATOR_PROF_H
 #define ALLOCATOR_PROF_H
 
-#define DISABLE_ALLOCATOR_PROF 0
+#define DISABLE_ALLOCATOR_PROF 1
 
 #if DISABLE_ALLOCATOR_PROF
 #define ALLOCATOR_PROF_ENABLE() return
@@ -52,6 +52,8 @@ private:
 
     std::vector<AllocatorInfo> allocator_info_history;
 
+    std::map<uint64_t, bool> op_type_list;
+
 private:
 
     void update_status(Status& stat, int64_t amount);
@@ -61,6 +63,8 @@ private:
     MemoryRange locate_segment(Block* block);
 
     void dump_allocator_snapshot_history(std::string filename);
+
+    void dump_op_type_list(std::string filename);
 
 public:
     allocatorProf();

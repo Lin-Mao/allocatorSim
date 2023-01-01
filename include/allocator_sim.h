@@ -60,6 +60,10 @@ public:
     Block* malloc(int device, size_t orig_size, int stream);
 
     void free(Block* block);
+
+    size_t get_max_reserved_size();
+
+    void reset_max_reserved_size();
 };
 
 #endif  // ALLOCATOR_SIM_H

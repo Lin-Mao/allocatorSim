@@ -6,7 +6,11 @@ allocatorProf::allocatorProf() {
 allocatorProf::~allocatorProf() {
     ALLOCATOR_PROF_ENABLE();
 
-    dump_allocator_snapshot_history("/home/lm/allocatorSim/output/snapshot_history.txt");
+    std::string path = "/home/lm/allocatorSim/output/";
+
+    dump_allocator_snapshot_history(path + "snapshot_history.txt");
+
+    dump_op_type_list(path + "op_type_list.log");
 }
 
 void allocatorProf::update_segment_create(Block* block, size_t size) {
@@ -84,6 +88,8 @@ void allocatorProf::update_block_change(Block* block,
 void allocatorProf::update_block_allocate(Block* block) {
     ALLOCATOR_PROF_ENABLE();
 
+    op_type_list.emplace(op_id, true);
+
     update_status(allocator_info.blocks, 1);
     update_status(allocator_info.allocated_bytes, block->size);
     auto range = locate_segment(block);
@@ -103,6 +109,8 @@ void allocatorProf::update_block_allocate(Block* block) {
 
 void allocatorProf::update_block_free(Block* block, size_t size) {
     ALLOCATOR_PROF_ENABLE();
+
+    op_type_list.emplace(op_id, false);
 
     update_status(allocator_info.blocks, -1);
     update_status(allocator_info.allocated_bytes, size);
@@ -172,17 +180,17 @@ void allocatorProf::dump_allocator_snapshot_history(std::string filename) {
         for (auto segment : snapshot.second) {
             output << "[segment] "
                    << "op_id: " << segment.first.op_id
-                   << ", address: " << segment.first.address
+                //    << ", address: " << segment.first.address
                    << ", size: " << segment.first.total_size
                    << "B (" << format_size(segment.first.total_size) << ")"
-                   << ", ratio: "
-                   << ((float) segment.first.allocated_size) / segment.first.total_size
-                   << ", frag: " << segment.first.fragmentation
+                //    << ", ratio: "
+                //    << ((float) segment.first.allocated_size) / segment.first.total_size
+                //    << ", frag: " << segment.first.fragmentation
                    << std::endl;
             for (auto block : segment.second) {
-                output << "[" << block.address << ", "
-                       << block.address + block.size << "]"
-                       << ", size: " << block.size
+                // output << "[" << block.address << ", "
+                //        << block.address + block.size << "], "
+                output << "size: " << block.size
                        << " B (" << format_size(block.size) << ")"
                        << ", used: " << std::boolalpha << block.allocated << std::endl;
             }
@@ -191,4 +199,12 @@ void allocatorProf::dump_allocator_snapshot_history(std::string filename) {
         output << std::endl;
     }
     output.close();
+}
+
+void allocatorProf::dump_op_type_list(std::string filename) {
+    std::ofstream out(filename);
+    for (auto op : op_type_list) {
+        out << op.first << ": " << std::boolalpha << op.second << std::endl;
+    }
+    out.close();
 }

@@ -34,3 +34,11 @@ void allocatorMgr::free_block() {
         this->block_ref_map.erase(b);
     }
 }
+
+size_t allocatorMgr::get_reserved_size() {
+    return alloc_sim.get_max_reserved_size();
+}
+
+void allocatorMgr::reset_reserved_size() {
+    alloc_sim.reset_max_reserved_size();
+}
