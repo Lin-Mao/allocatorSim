@@ -27,6 +27,8 @@ struct MemoryRange;
 
 typedef bool (*Comparison)(const Block*, const Block*);
 
+typedef std::map<uint64_t, std::pair<uint64_t, size_t>> blockMap_t;
+
 struct Block {
     int device; // gpu
     int stream; // allocation stream

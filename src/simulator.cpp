@@ -7,8 +7,6 @@
 #include "allocator_sim.h"
 #include "allocator_mgr.h"
 
-typedef std::map<uint64_t, std::pair<uint64_t, size_t>> blockMap_t;
-
 std::vector<size_t> split_line(std::string str, const std::string c) {
     std::vector<size_t> vec;
 
@@ -72,7 +70,7 @@ int main() {
     // allocatorSim allocSim;
     // allocSim.test_allocator();
 
-    std::string trace_file = "/home/lm/allocatorSim/output/baseline/sim_input.log";
+    std::string trace_file = "/home/lm/allocatorSim/input/baseline/sim_input.log";
     blockMap_t input_block_map;
     uint64_t min, max;
     std::tie(min, max) = process_trace(trace_file, input_block_map);
