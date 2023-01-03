@@ -80,7 +80,7 @@ private:
 
     std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2};
-    std::set<size_t> kSmallBuffer_candidates {2097152, 2097152*2, 2097152*3, 2097152*4, 2097152*5};
+    std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5};
     std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2, 20971520*3};
     std::set<size_t> kMinLargeAlloc_candidates {1048576*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10};
     std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*16};

@@ -1,5 +1,6 @@
 #include "allocator_opt.h"
 #include <iomanip>
+#include <cassert>
 
 allocatorOpt::allocatorOpt(blockMap_t trace, uint64_t max, uint64_t min)
                         : trace(trace), max(max), min(min) {
@@ -17,7 +18,9 @@ std::pair<size_t, size_t> allocatorOpt::evaluate_model() {
         alloc_mgr.free_block();
     }
 
-    return alloc_mgr.get_allocator_memory_usage();
+    auto memory_usage = alloc_mgr.get_allocator_memory_usage();
+    assert(memory_usage.first <= memory_usage.second);
+    return memory_usage;
 }
 
 void allocatorOpt::search_kMinBlockSize() {
