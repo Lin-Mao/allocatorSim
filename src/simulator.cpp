@@ -75,6 +75,7 @@ void search_config(const blockMap_t& block_map, const uint64_t min, const uint64
 }
 
 int main() {
+    // trace format(each line): start_op_id end_op_id tensor_size
     std::string trace_file = "/home/lm/allocatorSim/input/baseline/sim_input.log";
     blockMap_t input_block_map;
     uint64_t min, max;
