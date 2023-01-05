@@ -1,10 +1,14 @@
 #include "allocator_mgr.h"
+#include <cassert>
+#include <iomanip>
 
 namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
 allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
+    this->block_ref_map = std::map<Block*, size_t>();
+    allocatorSim alloc_sim();
 }
 
 allocatorMgr::allocatorMgr(int device, int stream) {
@@ -12,6 +16,158 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     this->stream = stream;
     this->block_ref_map = std::map<Block*, size_t>();
     allocatorSim alloc_sim();
+}
+
+bool allocatorMgr::check_constraints() {
+    if (allocatorConf::get_kMinLargeAlloc() >= allocatorConf::get_kLargeBuffer()) {
+        return false;
+    }
+
+    return true;
+}
+
+template<typename FUNC1, typename FUNC2, typename candidate_t>
+void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
+                                    std::set<candidate_t> candidates) {
+    for (auto candidate : candidates) {
+        auto prev = get_func();
+        set_func(candidate);
+
+        if (!check_constraints()) {
+            set_func(prev);
+            continue;
+        }
+        
+        auto reserved_size = simulate_allocator().second;
+        if (reserved_size >= current_reserved_size) {
+            set_func(prev);
+        }
+
+        current_reserved_size = std::min(current_reserved_size, reserved_size);
+        reset_allocator_memory_usage();
+        empty_cache();
+    }
+}
+
+void allocatorMgr::log_configs(Configs& configs) {
+    auto memory_usage = simulate_allocator();
+    configs = Configs(
+        allocatorConf::get_kMinBlockSize(),
+        allocatorConf::get_kSmallSize(),
+        allocatorConf::get_kSmallBuffer(),
+        allocatorConf::get_kLargeBuffer(),
+        allocatorConf::get_kMinLargeAlloc(),
+        allocatorConf::get_kRoundLarge(),
+        memory_usage.first,
+        memory_usage.second
+    );
+}
+
+void allocatorMgr::collector_trace(void* ptr, int64_t size) {
+    if (size > 0) {
+        _active_blocks.emplace(ptr, std::make_pair(op_id, size));
+        op_id++;
+    } else {
+        auto b = _active_blocks.find(ptr);
+        _trace.emplace(
+            b->second.first, std::make_pair(op_id, b->second.second));
+        _active_blocks.erase(b);
+        op_id++;
+    }
+}
+
+std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
+    for (uint64_t i = 0; i <= op_id; i++) {
+        auto block = _trace.find(i);
+        if (block != _trace.end()) {
+            auto reference = std::get<0>(block->second) - block->first;
+            malloc_block(std::get<1>(block->second), reference);
+        }
+        update_block_reference();
+        free_block();
+    }
+    auto memory_usage = get_allocator_memory_usage();
+    assert(memory_usage.first <= memory_usage.second);
+    return memory_usage;
+}
+
+void allocatorMgr::search_configs() {
+    log_configs(original_configs);
+
+    search_candidates(
+        allocatorConf::get_kMinBlockSize,
+        allocatorConf::set_kMinBlockSize,
+        kMinBlockSize_candidates);
+    
+    search_candidates(
+        allocatorConf::get_kSmallSize,
+        allocatorConf::set_kSmallSize,
+        kSmallSize_candidates);
+
+    search_candidates(
+        allocatorConf::get_kSmallBuffer,
+        allocatorConf::set_kSmallBuffer,
+        kSmallBuffer_candidates);
+
+    search_candidates(
+        allocatorConf::get_kLargeBuffer,
+        allocatorConf::set_kLargeBuffer,
+        kLargeBuffer_candidates);
+
+    search_candidates(
+        allocatorConf::get_kMinLargeAlloc,
+        allocatorConf::set_kMinLargeAlloc,
+        kMinLargeAlloc_candidates);
+
+    search_candidates(
+        allocatorConf::get_kRoundLarge,
+        allocatorConf::set_kRoundLarge,
+        kRoundLarge_candidates);
+
+    log_configs(searched_configs);
+    report_config();
+}
+
+void allocatorMgr::report_config() {
+    int width = 36;
+    std::cout << std::setw(width) << std::left << "[Config result]" << std::endl;
+    std::cout << std::setw(width) << std::left << "Max allocated size: " << original_configs.allocated_size
+              << " => " << searched_configs.allocated_size << " diff: "
+              << static_cast<int64_t>(original_configs.allocated_size - searched_configs.allocated_size)
+              << std::endl;
+    std::cout << std::setw(width) << std::left << "Max reserved size: " << original_configs.reserved_size
+              << " => " << searched_configs.reserved_size << " diff: "
+              << static_cast<int64_t>(original_configs.reserved_size - searched_configs.reserved_size)
+              << std::endl;
+    std::cout << std::setw(width) << std::left << "kMinBlockSize: " << original_configs.kMinBlockSize << " => "
+              << searched_configs.kMinBlockSize << std::endl;
+    std::cout << std::setw(width) << std::left << "kSmallSize: " << original_configs.kSmallSize << " => "
+              << searched_configs.kSmallSize << std::endl;
+    std::cout << std::setw(width) << std::left << "kSmallBuffer: " << original_configs.kSmallBuffer << " => "
+              << searched_configs.kSmallBuffer << std::endl;
+    std::cout << std::setw(width) << std::left << "kLargeBuffer: " << original_configs.kLargeBuffer << " => "
+              << searched_configs.kLargeBuffer << std::endl;
+    std::cout << std::setw(width) << std::left << "kMinLargeAlloc: " << original_configs.kMinLargeAlloc << " => "
+              << searched_configs.kMinLargeAlloc << std::endl;
+    std::cout << std::setw(width) << std::left << "kRoundLarge: " << original_configs.kRoundLarge << " => "
+              << searched_configs.kRoundLarge << std::endl;
+    std::cout << std::setw(width) << std::left << "m_max_split_size: " << original_configs.m_max_split_size
+              << " => " << searched_configs.m_max_split_size << std::endl;
+    std::cout << std::setw(width) << std::left << "m_roundup_power2_divisions: "
+              << original_configs.m_roundup_power2_divisions << " => "
+              << searched_configs.m_roundup_power2_divisions << std::endl;
+    std::cout << std::setw(width) << std::left << "m_roundup_bypass_threshold: "
+              << original_configs.m_roundup_bypass_threshold << " => "
+              << searched_configs.m_roundup_bypass_threshold << std::endl;
+    std::cout << std::setw(width) << std::left << "m_garbage_collection_threshold: "
+              << original_configs.m_garbage_collection_threshold << " => "
+              << searched_configs.m_garbage_collection_threshold << std::endl;
+    std::cout << std::setw(width) << std::left << "m_memory_segment_address_start: "
+              << original_configs.m_memory_segment_address_start << " => "
+              << searched_configs.m_memory_segment_address_start << std::endl;
+    std::cout << std::setw(width) << std::left << "m_memory_segment_address_interval: "
+              << original_configs.m_memory_segment_address_interval << " => "
+              << searched_configs.m_memory_segment_address_interval << std::endl;
 }
 
 void allocatorMgr::malloc_block(size_t orig_size, size_t ref) {

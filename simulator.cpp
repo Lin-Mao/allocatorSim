@@ -6,9 +6,9 @@
 
 #include "allocator_sim.h"
 #include "allocator_mgr.h"
-#include "allocator_opt.h"
 
 using trace_type_t = c10::cuda::AllocatorSim::blockMap_t;
+using trace_t = std::map<uint64_t, std::pair<uint64_t, size_t>>;
 
 std::vector<size_t> split_line(std::string str, const std::string c) {
     std::vector<size_t> vec;
@@ -55,35 +55,52 @@ std::pair<uint64_t, uint64_t> process_trace(std::string filename, trace_type_t& 
     return std::make_pair(min, max);
 }
 
-void run_allocator(const trace_type_t& block_map, const uint64_t min, const uint64_t max) {
+void generate_trace(const trace_type_t& block_map, trace_t& malloc_map, trace_t& free_map) {
+    uint64_t ptr = c10::cuda::AllocatorSim::allocatorConf::get_memory_segment_address_start();
+    uint64_t interval = c10::cuda::AllocatorSim::allocatorConf::get_memory_segment_address_interval();
+
+    std::for_each(block_map.begin(), block_map.end(),
+    [&malloc_map, &free_map, &ptr, &interval](std::pair<uint64_t, std::pair<uint64_t, size_t>> p) {
+        malloc_map.emplace(p.first, std::make_pair(ptr, p.second.second));
+        free_map.emplace(p.second.first, std::make_pair(ptr, p.second.second));
+        ptr += interval;
+    });
+}
+
+void run_allocator(const trace_t& malloc_map, const trace_t& free_map, uint64_t min, uint64_t max) {
     c10::cuda::AllocatorSim::allocatorMgr alloc_mgr;
 
     for (uint64_t i = min; i <= max; i++) {
-        auto block = block_map.find(i);
-        if (block != block_map.end()) {
-            auto reference = std::get<0>(block->second) - block->first;
-            alloc_mgr.malloc_block(std::get<1>(block->second), reference);
+        auto alloc = malloc_map.find(i);
+        if (alloc != malloc_map.end()) {
+            alloc_mgr.collector_trace(
+                reinterpret_cast<void*>(alloc->second.first), static_cast<int64_t>(alloc->second.second));
         }
-        alloc_mgr.update_block_reference();
-        alloc_mgr.free_block();
+        auto free = free_map.find(i);
+        if (free != free_map.end()) {
+            alloc_mgr.collector_trace(
+                reinterpret_cast<void*>(free->second.first), static_cast<int64_t>(-free->second.second));
+        }
     }
-    alloc_mgr.show_allocator_memory_usage();
-}
 
-void search_config(const trace_type_t& block_map, const uint64_t min, const uint64_t max) {
-    c10::cuda::AllocatorSim::allocatorOpt alloc_opt(block_map, max, min);
-
-    alloc_opt.search_configs();
+    auto memory_usage = alloc_mgr.simulate_allocator();
+    std::cout << "Max allocated size: " << memory_usage.first << std::endl;
+    std::cout << "Max reserved size: " << memory_usage.second << std::endl << std::endl;
+    alloc_mgr.search_configs();
 }
 
 int main() {
     // trace format(each line): start_op_id end_op_id tensor_size
     std::string trace_file = "./input/alexnet_train.log";
     trace_type_t input_block_map;
+    trace_t malloc_map;
+    trace_t free_map;
     uint64_t min, max;
+
     std::tie(min, max) = process_trace(trace_file, input_block_map);
-    // run_allocator(input_block_map, min, max);
-    search_config(input_block_map, min, max);
+
+    generate_trace(input_block_map, malloc_map, free_map);
+    run_allocator(malloc_map, free_map, min, max);
 
     return 0;
 }
