@@ -4,6 +4,10 @@
 #ifndef ALLOCATOR_PROF_H
 #define ALLOCATOR_PROF_H
 
+#include "allocator_utils.h"
+
+#include <fstream>
+
 #define DISABLE_ALLOCATOR_PROF 1
 
 #if DISABLE_ALLOCATOR_PROF
@@ -12,9 +16,9 @@
 #define ALLOCATOR_PROF_ENABLE() ((void)0)
 #endif
 
-#include "allocator_utils.h"
-
-#include <fstream>
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
 
 struct AllocatorInfo {
     Status blocks;
@@ -80,5 +84,8 @@ public:
     void update_block_free(Block* block, size_t size);
 };
 
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim
 
 #endif  // ALLOCATOR_PROF_H

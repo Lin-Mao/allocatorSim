@@ -1,5 +1,9 @@
 #include "allocator_mgr.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
 }
 
@@ -54,3 +58,7 @@ void allocatorMgr::show_allocator_memory_usage() {
     std::cout << "Max reserved size: " << memory_usage.second << " B ("
               << format_size(memory_usage.second) << ")" << std::endl;
 }
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim

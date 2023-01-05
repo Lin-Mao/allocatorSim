@@ -2,6 +2,10 @@
 #include <iomanip>
 #include <cassert>
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 allocatorOpt::allocatorOpt(blockMap_t trace, uint64_t max, uint64_t min)
                         : trace(trace), max(max), min(min) {
     current_max_size = evaluate_model().second;
@@ -182,3 +186,7 @@ void allocatorOpt::report_config() {
               << original_configs.m_memory_segment_address_interval << " => "
               << searched_configs.m_memory_segment_address_interval << std::endl;
 }
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim

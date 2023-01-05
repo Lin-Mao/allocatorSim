@@ -1,5 +1,8 @@
 #include "allocator_conf.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
 
 size_t allocatorConf::kMinBlockSize =512;
 // largest "small" allocation is 1 MiB
@@ -120,3 +123,7 @@ uint64_t allocatorConf::get_memory_segment_address_interval() {
 void allocatorConf::set_memory_segment_address_interval(uint64_t interval) {
     m_memory_segment_address_interval = interval;
 }
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim

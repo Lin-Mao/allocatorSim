@@ -4,6 +4,13 @@
 #include "allocator_utils.h"
 #include "allocator_sim.h"
 
+
+using namespace std;
+
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 class allocatorMgr {
 private:
     int device;
@@ -32,5 +39,8 @@ public:
 
 };
 
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim
 
 #endif  // ALLOCATOR_MGR_H

@@ -8,6 +8,8 @@
 #include "allocator_mgr.h"
 #include "allocator_opt.h"
 
+using trace_type_t = c10::cuda::AllocatorSim::blockMap_t;
+
 std::vector<size_t> split_line(std::string str, const std::string c) {
     std::vector<size_t> vec;
 
@@ -28,7 +30,7 @@ std::vector<size_t> split_line(std::string str, const std::string c) {
     return vec;
 }
 
-std::pair<uint64_t, uint64_t> process_trace(std::string filename, blockMap_t& block_map) {
+std::pair<uint64_t, uint64_t> process_trace(std::string filename, trace_type_t& block_map) {
     std::ifstream file;
     file.open(filename);
     std::string line;
@@ -53,8 +55,8 @@ std::pair<uint64_t, uint64_t> process_trace(std::string filename, blockMap_t& bl
     return std::make_pair(min, max);
 }
 
-void run_allocator(const blockMap_t& block_map, const uint64_t min, const uint64_t max) {
-    allocatorMgr alloc_mgr;
+void run_allocator(const trace_type_t& block_map, const uint64_t min, const uint64_t max) {
+    c10::cuda::AllocatorSim::allocatorMgr alloc_mgr;
 
     for (uint64_t i = min; i <= max; i++) {
         auto block = block_map.find(i);
@@ -68,16 +70,16 @@ void run_allocator(const blockMap_t& block_map, const uint64_t min, const uint64
     alloc_mgr.show_allocator_memory_usage();
 }
 
-void search_config(const blockMap_t& block_map, const uint64_t min, const uint64_t max) {
-    allocatorOpt alloc_opt(block_map, max, min);
+void search_config(const trace_type_t& block_map, const uint64_t min, const uint64_t max) {
+    c10::cuda::AllocatorSim::allocatorOpt alloc_opt(block_map, max, min);
 
     alloc_opt.search_configs();
 }
 
 int main() {
     // trace format(each line): start_op_id end_op_id tensor_size
-    std::string trace_file = "/home/lm/allocatorSim/input/baseline/sim_input.log";
-    blockMap_t input_block_map;
+    std::string trace_file = "./input/alexnet_train.log";
+    trace_type_t input_block_map;
     uint64_t min, max;
     std::tie(min, max) = process_trace(trace_file, input_block_map);
     // run_allocator(input_block_map, min, max);

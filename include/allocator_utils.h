@@ -13,6 +13,10 @@
 #include <memory>
 #include <sstream>
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 #define LIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 1))
 #define UNLIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 0))
 
@@ -251,5 +255,9 @@ struct MemoryRange {
 };
 
 std::string format_size(size_t size);
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim
 
 #endif // ALLOCATOR_UTILS_H

@@ -1,5 +1,9 @@
 #include "allocator_utils.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 std::string format_size(size_t size) {
     std::ostringstream os;
     os.precision(2);
@@ -18,3 +22,7 @@ std::string format_size(size_t size) {
     }
     return os.str();
 }
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim

@@ -11,6 +11,10 @@
 #include "allocator_conf.h"
 #include "allocator_prof.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 class allocatorSim {
 private:
     BlockPool small_blocks;
@@ -67,5 +71,9 @@ public:
 
     void set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes);
 };
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim
 
 #endif  // ALLOCATOR_SIM_H

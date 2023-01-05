@@ -1,12 +1,16 @@
 #include "allocator_prof.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 allocatorProf::allocatorProf() {
 }
 
 allocatorProf::~allocatorProf() {
     ALLOCATOR_PROF_ENABLE();
 
-    std::string path = "/home/lm/allocatorSim/output/";
+    std::string path = "./output/";
 
     dump_allocator_snapshot_history(path + "snapshot_history.txt");
 
@@ -208,3 +212,7 @@ void allocatorProf::dump_op_type_list(std::string filename) {
     }
     out.close();
 }
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim

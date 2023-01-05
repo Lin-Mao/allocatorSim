@@ -8,6 +8,10 @@
 
 #include "allocator_sim.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 static bool BlockComparator(const Block* a, const Block* b) {
     if (a->stream != b->stream) {
         return (uintptr_t)a->stream < (uintptr_t)b->stream;
@@ -315,3 +319,7 @@ void allocatorSim::set_max_memory_usage(size_t allocated_bytes, size_t reserved_
     max_allocated_bytes = allocated_bytes;
     max_reserved_bytes = reserved_bytes;
 }
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim

@@ -3,6 +3,10 @@
 
 #include "allocator_mgr.h"
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 struct Configs {
     size_t kMinBlockSize;
     size_t kSmallSize;
@@ -110,5 +114,9 @@ public:
     void report_config();
 
 };
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim
 
 #endif  // ALLOCATOR_OPT_H

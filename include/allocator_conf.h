@@ -8,6 +8,10 @@
 #include <limits>
 #include <cstdint>
 
+namespace c10 {
+namespace cuda {
+namespace AllocatorSim {
+
 class allocatorConf {
 private:
     static size_t kMinBlockSize;
@@ -74,5 +78,9 @@ public:
     static void set_memory_segment_address_interval(uint64_t interval);
 
 };
+
+}  // namespace c10
+}  // namespace cuda
+}  // namespace AllocatorSim
 
 #endif // ALLOCATOR_CFG_H
