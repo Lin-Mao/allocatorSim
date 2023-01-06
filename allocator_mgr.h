@@ -125,9 +125,11 @@ public:
 
     void collector_trace(void* ptr, int64_t size);
 
-    void search_configs();
+    void optimize_configs();
 
     void report_config();
+
+    void iteration_trigger(bool begin = true);
 
 };
 

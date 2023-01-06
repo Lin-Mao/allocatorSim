@@ -76,6 +76,17 @@ void allocatorMgr::collector_trace(void* ptr, int64_t size) {
     }
 }
 
+void allocatorMgr::iteration_trigger(bool begin) {
+    if (begin) {
+        std::cout << "begin: " << _active_blocks.size() << std::endl;
+        std::cout << "end: " << _trace.size() << std::endl;
+    } else {
+        // optimize_configs();
+        std::cout << "start: " << _active_blocks.size() << std::endl;
+        std::cout << "end: " << _trace.size() << std::endl;
+    }
+}
+
 std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
     for (uint64_t i = 0; i <= op_id; i++) {
         auto block = _trace.find(i);
@@ -91,7 +102,7 @@ std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
     return memory_usage;
 }
 
-void allocatorMgr::search_configs() {
+void allocatorMgr::optimize_configs() {
     log_configs(original_configs);
 
     search_candidates(
