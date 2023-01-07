@@ -81,6 +81,7 @@ private:
     std::map<Block*, size_t> block_ref_map;
     
     uint64_t op_id = 0;
+    bool initial_opt = true;
     size_t current_reserved_size;
     std::map<void*, std::pair<uint64_t, size_t>> _active_blocks;
     blockMap_t _trace;
@@ -101,6 +102,8 @@ private:
     bool check_constraints();
 
     void log_configs(Configs& configs);
+
+    void apply_configs(const Configs& configs);
 
     void malloc_block(size_t orig_size, size_t ref);
 
@@ -127,9 +130,9 @@ public:
 
     void optimize_configs();
 
-    void report_config();
+    void report_configs();
 
-    void iteration_trigger(bool begin = true);
+    bool iteration_trigger(bool begin = true);
 
 };
 

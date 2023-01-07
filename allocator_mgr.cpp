@@ -76,15 +76,19 @@ void allocatorMgr::collector_trace(void* ptr, int64_t size) {
     }
 }
 
-void allocatorMgr::iteration_trigger(bool begin) {
+bool allocatorMgr::iteration_trigger(bool begin) {
+    size_t result = false;
     if (begin) {
-        std::cout << "begin: " << _active_blocks.size() << std::endl;
-        std::cout << "end: " << _trace.size() << std::endl;
+        // do something
     } else {
-        // optimize_configs();
-        std::cout << "start: " << _active_blocks.size() << std::endl;
-        std::cout << "end: " << _trace.size() << std::endl;
+        if (initial_opt) {
+            optimize_configs();
+            result = true;
+            initial_opt = true;
+        }
+        _trace.clear();
     }
+    return result;
 }
 
 std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
@@ -136,10 +140,10 @@ void allocatorMgr::optimize_configs() {
         kRoundLarge_candidates);
 
     log_configs(searched_configs);
-    report_config();
+    report_configs();
 }
 
-void allocatorMgr::report_config() {
+void allocatorMgr::report_configs() {
     int width = 36;
     std::cout << std::setw(width) << std::left << "[Config result]" << std::endl;
     std::cout << std::setw(width) << std::left << "Max allocated size: " << original_configs.allocated_size
@@ -179,6 +183,21 @@ void allocatorMgr::report_config() {
     std::cout << std::setw(width) << std::left << "m_memory_segment_address_interval: "
               << original_configs.m_memory_segment_address_interval << " => "
               << searched_configs.m_memory_segment_address_interval << std::endl;
+}
+
+void allocatorMgr::apply_configs(const Configs& configs) {
+    allocatorConf::set_kMinBlockSize(configs.kMinBlockSize);
+    allocatorConf::set_kSmallSize(configs.kSmallSize);
+    allocatorConf::set_kSmallBuffer(configs.kSmallBuffer);
+    allocatorConf::set_kLargeBuffer(configs.kLargeBuffer);
+    allocatorConf::set_kMinLargeAlloc(configs.kMinLargeAlloc);
+    allocatorConf::set_kRoundLarge(configs.kRoundLarge);
+    allocatorConf::set_max_split_size(configs.m_max_split_size);
+    allocatorConf::set_roundup_power2_divisions(configs.m_roundup_power2_divisions);
+    allocatorConf::set_roundup_bypass_threshold(configs.m_roundup_bypass_threshold);
+    allocatorConf::set_garbage_collection_threshold(configs.m_garbage_collection_threshold);
+    allocatorConf::set_memory_segment_address_start(configs.m_memory_segment_address_start);
+    allocatorConf::set_memory_segment_address_interval(configs.m_memory_segment_address_interval);
 }
 
 void allocatorMgr::malloc_block(size_t orig_size, size_t ref) {
