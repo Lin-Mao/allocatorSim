@@ -63,7 +63,7 @@ void allocatorMgr::log_configs(Configs& configs) {
     );
 }
 
-void allocatorMgr::collector_trace(void* ptr, int64_t size) {
+void allocatorMgr::collect_trace(void* ptr, int64_t size) {
     if (size > 0) {
         _active_blocks.emplace(ptr, std::make_pair(op_id, size));
         op_id++;
@@ -76,6 +76,15 @@ void allocatorMgr::collector_trace(void* ptr, int64_t size) {
     }
 }
 
+char* allocatorMgr::malloc_cpu_memory_chunk(size_t size) {
+    char* pointer = (char*) malloc(size);
+    return pointer;
+}
+
+void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
+    free((void*)pointer);
+}
+
 bool allocatorMgr::iteration_trigger(bool begin) {
     size_t result = false;
     if (begin) {
@@ -85,6 +94,7 @@ bool allocatorMgr::iteration_trigger(bool begin) {
             optimize_configs();
             result = true;
             initial_opt = true;
+            _active_blocks.clear();
         }
         _trace.clear();
     }
@@ -145,7 +155,8 @@ void allocatorMgr::optimize_configs() {
 
 void allocatorMgr::report_configs() {
     int width = 36;
-    std::cout << std::setw(width) << std::left << "[Config result]" << std::endl;
+    std::cout << std::setw(width) << std::left << "###################### [Config result] ######################"
+              << std::endl;
     std::cout << std::setw(width) << std::left << "Max allocated size: " << original_configs.allocated_size
               << " => " << searched_configs.allocated_size << " diff: "
               << static_cast<int64_t>(original_configs.allocated_size - searched_configs.allocated_size)
@@ -183,6 +194,7 @@ void allocatorMgr::report_configs() {
     std::cout << std::setw(width) << std::left << "m_memory_segment_address_interval: "
               << original_configs.m_memory_segment_address_interval << " => "
               << searched_configs.m_memory_segment_address_interval << std::endl;
+    std::cout << "############################################################" << std::endl;
 }
 
 void allocatorMgr::apply_configs(const Configs& configs) {

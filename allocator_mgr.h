@@ -126,13 +126,17 @@ public:
 
     std::pair<size_t, size_t> simulate_allocator();
 
-    void collector_trace(void* ptr, int64_t size);
+    void collect_trace(void* ptr, int64_t size);
 
     void optimize_configs();
 
     void report_configs();
 
     bool iteration_trigger(bool begin = true);
+
+    char* malloc_cpu_memory_chunk(size_t size);
+
+    void free_cpu_memory_chunk(char* pointer);
 
 };
 

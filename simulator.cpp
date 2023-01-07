@@ -73,12 +73,12 @@ void run_allocator(const trace_t& malloc_map, const trace_t& free_map, uint64_t 
     for (uint64_t i = min; i <= max; i++) {
         auto alloc = malloc_map.find(i);
         if (alloc != malloc_map.end()) {
-            alloc_mgr.collector_trace(
+            alloc_mgr.collect_trace(
                 reinterpret_cast<void*>(alloc->second.first), static_cast<int64_t>(alloc->second.second));
         }
         auto free = free_map.find(i);
         if (free != free_map.end()) {
-            alloc_mgr.collector_trace(
+            alloc_mgr.collect_trace(
                 reinterpret_cast<void*>(free->second.first), static_cast<int64_t>(-free->second.second));
         }
     }
