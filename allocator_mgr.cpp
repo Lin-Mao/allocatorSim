@@ -85,16 +85,22 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
     free((void*)pointer);
 }
 
-bool allocatorMgr::iteration_trigger(bool begin) {
+bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     size_t result = false;
     if (begin) {
         // do something
     } else {
         if (initial_opt) {
-            optimize_configs();
+            optimize_configs(5);
             result = true;
-            initial_opt = true;
-            _active_blocks.clear();
+            initial_opt = false;
+            std::cout << "===================================" << std::endl;
+            std::cout << active_size << std::endl;
+            std::cout << original_configs.reserved_size << std::endl;
+            std::cout << searched_configs.reserved_size << std::endl;
+            std::cout << "===================================" << std::endl;
+            // _active_blocks.clear();
+            apply_configs(original_configs);
         }
         _trace.clear();
     }
@@ -116,41 +122,43 @@ std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
     return memory_usage;
 }
 
-void allocatorMgr::optimize_configs() {
+void allocatorMgr::optimize_configs(int nums) {
     log_configs(original_configs);
 
-    search_candidates(
-        allocatorConf::get_kMinBlockSize,
-        allocatorConf::set_kMinBlockSize,
-        kMinBlockSize_candidates);
-    
-    search_candidates(
-        allocatorConf::get_kSmallSize,
-        allocatorConf::set_kSmallSize,
-        kSmallSize_candidates);
+    for (int i = 0; i < nums; i++) {
+        search_candidates(
+            allocatorConf::get_kMinBlockSize,
+            allocatorConf::set_kMinBlockSize,
+            kMinBlockSize_candidates);
+        
+        search_candidates(
+            allocatorConf::get_kSmallSize,
+            allocatorConf::set_kSmallSize,
+            kSmallSize_candidates);
 
-    search_candidates(
-        allocatorConf::get_kSmallBuffer,
-        allocatorConf::set_kSmallBuffer,
-        kSmallBuffer_candidates);
+        search_candidates(
+            allocatorConf::get_kSmallBuffer,
+            allocatorConf::set_kSmallBuffer,
+            kSmallBuffer_candidates);
 
-    search_candidates(
-        allocatorConf::get_kLargeBuffer,
-        allocatorConf::set_kLargeBuffer,
-        kLargeBuffer_candidates);
+        search_candidates(
+            allocatorConf::get_kLargeBuffer,
+            allocatorConf::set_kLargeBuffer,
+            kLargeBuffer_candidates);
 
-    search_candidates(
-        allocatorConf::get_kMinLargeAlloc,
-        allocatorConf::set_kMinLargeAlloc,
-        kMinLargeAlloc_candidates);
+        search_candidates(
+            allocatorConf::get_kMinLargeAlloc,
+            allocatorConf::set_kMinLargeAlloc,
+            kMinLargeAlloc_candidates);
 
-    search_candidates(
-        allocatorConf::get_kRoundLarge,
-        allocatorConf::set_kRoundLarge,
-        kRoundLarge_candidates);
+        search_candidates(
+            allocatorConf::get_kRoundLarge,
+            allocatorConf::set_kRoundLarge,
+            kRoundLarge_candidates);
+    }
 
     log_configs(searched_configs);
-    report_configs();
+    // report_configs();
 }
 
 void allocatorMgr::report_configs() {

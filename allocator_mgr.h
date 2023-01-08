@@ -89,11 +89,12 @@ private:
     Configs searched_configs;
 
     std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
-    std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2};
-    std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5};
+    std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2, 1048576*5/2, 1048576*3};
+    std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5, 20971520*6};
     std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2, 20971520*3};
-    std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10};
-    std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*16, 2097152*24, 2097152*32};
+    std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10, 10485760*12};
+    std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12,
+    2097152*14, 2097152*16, 2097152*18, 2097152*20, 2097152*22, 2097152*24, 2097152*26, 2097152*28, 2097152*30, 2097152*32};
 
 private:
     template<typename FUNC1, typename FUNC2, typename candidate_t>
@@ -128,11 +129,11 @@ public:
 
     void collect_trace(void* ptr, int64_t size);
 
-    void optimize_configs();
+    void optimize_configs(int nums = 1);
 
     void report_configs();
 
-    bool iteration_trigger(bool begin = true);
+    bool iteration_trigger(bool begin = true, size_t size = 0);
 
     char* malloc_cpu_memory_chunk(size_t size);
 
