@@ -16,6 +16,15 @@ size_t allocatorConf::kMinLargeAlloc = 10485760;
 // round up large allocations to 2 MiB
 size_t allocatorConf::kRoundLarge = 2097152;
 
+std::array<SET_FUNC, CONFIG_NUMS> allocatorConf::set_funcs = {
+    set_kMinBlockSize, set_kSmallSize, set_kSmallBuffer,
+    set_kLargeBuffer, set_kMinLargeAlloc, set_kRoundLarge
+};
+std::array<GET_FUNC, CONFIG_NUMS> allocatorConf::get_funcs = {
+    get_kMinBlockSize, get_kSmallSize, get_kSmallBuffer,
+    get_kLargeBuffer, get_kMinLargeAlloc, get_kRoundLarge
+};
+
 size_t allocatorConf::m_max_split_size = std::numeric_limits<size_t>::max();
 
 size_t allocatorConf::m_roundup_power2_divisions = 0;

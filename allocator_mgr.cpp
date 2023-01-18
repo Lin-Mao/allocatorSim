@@ -41,6 +41,8 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
         auto reserved_size = simulate_allocator().second;
         if (reserved_size >= current_reserved_size) {
             set_func(prev);
+        } else {
+            log_configs(searched_configs, true);
         }
 
         current_reserved_size = std::min(current_reserved_size, reserved_size);
@@ -49,8 +51,41 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
     }
 }
 
-void allocatorMgr::log_configs(Configs& configs) {
-    auto memory_usage = simulate_allocator();
+void allocatorMgr::search_configs() {
+    log_configs(original_configs);
+    log_configs(searched_configs, false);
+    for (size_t i = 0; i < CONFIG_NUMS; i++) {
+        auto candidates = ALL_CANDIDATES[i];
+        auto set_func = allocatorConf::set_funcs[i];
+        auto get_func = allocatorConf::get_funcs[i];
+        for (auto candidate : candidates) {
+            auto prev = get_func();
+            set_func(candidate);
+
+            if (!check_constraints()) {
+                set_func(prev);
+                continue;
+            }
+
+            for(size_t j = 0; j < CONFIG_NUMS; j++) {
+                if (j == i) continue;
+                search_candidates(
+                    allocatorConf::get_funcs[j],
+                    allocatorConf::set_funcs[j],
+                    ALL_CANDIDATES[j]);
+            }
+        }
+    }
+    apply_configs(searched_configs);
+    log_configs(searched_configs);
+    report_configs();
+}
+
+void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
+    auto memory_usage = std::make_pair(0, 0);
+    if (get_mem) {
+        memory_usage = simulate_allocator();
+    }
     configs = Configs(
         allocatorConf::get_kMinBlockSize(),
         allocatorConf::get_kSmallSize(),
@@ -91,7 +126,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
         // do something
     } else {
         if (initial_opt) {
-            optimize_configs(5);
+            search_configs();
             result = true;
             initial_opt = false;
             _active_blocks.clear();
@@ -114,45 +149,6 @@ std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
     auto memory_usage = get_allocator_memory_usage();
     assert(memory_usage.first <= memory_usage.second);
     return memory_usage;
-}
-
-void allocatorMgr::optimize_configs(int nums) {
-    log_configs(original_configs);
-
-    for (int i = 0; i < nums; i++) {
-        search_candidates(
-            allocatorConf::get_kMinBlockSize,
-            allocatorConf::set_kMinBlockSize,
-            kMinBlockSize_candidates);
-        
-        search_candidates(
-            allocatorConf::get_kSmallSize,
-            allocatorConf::set_kSmallSize,
-            kSmallSize_candidates);
-
-        search_candidates(
-            allocatorConf::get_kSmallBuffer,
-            allocatorConf::set_kSmallBuffer,
-            kSmallBuffer_candidates);
-
-        search_candidates(
-            allocatorConf::get_kLargeBuffer,
-            allocatorConf::set_kLargeBuffer,
-            kLargeBuffer_candidates);
-
-        search_candidates(
-            allocatorConf::get_kMinLargeAlloc,
-            allocatorConf::set_kMinLargeAlloc,
-            kMinLargeAlloc_candidates);
-
-        search_candidates(
-            allocatorConf::get_kRoundLarge,
-            allocatorConf::set_kRoundLarge,
-            kRoundLarge_candidates);
-    }
-
-    log_configs(searched_configs);
-    // report_configs();
 }
 
 void allocatorMgr::report_configs() {
@@ -206,12 +202,12 @@ void allocatorMgr::apply_configs(const Configs& configs) {
     allocatorConf::set_kLargeBuffer(configs.kLargeBuffer);
     allocatorConf::set_kMinLargeAlloc(configs.kMinLargeAlloc);
     allocatorConf::set_kRoundLarge(configs.kRoundLarge);
-    allocatorConf::set_max_split_size(configs.m_max_split_size);
-    allocatorConf::set_roundup_power2_divisions(configs.m_roundup_power2_divisions);
-    allocatorConf::set_roundup_bypass_threshold(configs.m_roundup_bypass_threshold);
-    allocatorConf::set_garbage_collection_threshold(configs.m_garbage_collection_threshold);
-    allocatorConf::set_memory_segment_address_start(configs.m_memory_segment_address_start);
-    allocatorConf::set_memory_segment_address_interval(configs.m_memory_segment_address_interval);
+    // allocatorConf::set_max_split_size(configs.m_max_split_size);
+    // allocatorConf::set_roundup_power2_divisions(configs.m_roundup_power2_divisions);
+    // allocatorConf::set_roundup_bypass_threshold(configs.m_roundup_bypass_threshold);
+    // allocatorConf::set_garbage_collection_threshold(configs.m_garbage_collection_threshold);
+    // allocatorConf::set_memory_segment_address_start(configs.m_memory_segment_address_start);
+    // allocatorConf::set_memory_segment_address_interval(configs.m_memory_segment_address_interval);
 }
 
 void allocatorMgr::malloc_block(size_t orig_size, size_t ref) {

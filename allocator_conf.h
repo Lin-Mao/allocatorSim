@@ -7,10 +7,16 @@
 #include <cstddef>
 #include <limits>
 #include <cstdint>
+#include <array>
 
 namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
+
+#define CONFIG_NUMS 6
+
+using SET_FUNC = void(*)(size_t);
+using GET_FUNC = size_t(*)();
 
 class allocatorConf {
 private:
@@ -29,6 +35,9 @@ private:
     static uint64_t m_memory_segment_address_interval;
 
 public:
+    static std::array<SET_FUNC, CONFIG_NUMS> set_funcs;
+    static std::array<GET_FUNC, CONFIG_NUMS> get_funcs;
+
     static size_t get_kMinBlockSize();
 
     static void set_kMinBlockSize(size_t size);
