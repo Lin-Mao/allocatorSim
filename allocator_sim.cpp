@@ -135,20 +135,6 @@ bool allocatorSim::release_available_cached_blocks(AllocParams& p) {
 }
 
 bool allocatorSim::release_cached_blocks() {
-    // std::cout << "large blocks size(before): " << large_blocks.blocks.size() << std::endl;
-    // std::cout << "small blocks size(before): " << small_blocks.blocks.size() << std::endl;
-
-    // auto large_size = 0;
-    // for (auto b : large_blocks.blocks) {
-    //     large_size += b->size;
-    // }
-    // auto small_size = 0;
-    // for (auto b : small_blocks.blocks) {
-    //     small_size += b->size;
-    // }
-    // std::cout << "large size: " << large_size << ", small size: " << small_size
-    //           << ", total size: " << large_size + small_size << std::endl;
-
     release_blocks(large_blocks);
     release_blocks(small_blocks);
 

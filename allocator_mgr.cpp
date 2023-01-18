@@ -94,13 +94,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
             optimize_configs(5);
             result = true;
             initial_opt = false;
-            std::cout << "===================================" << std::endl;
-            std::cout << active_size << std::endl;
-            std::cout << original_configs.reserved_size << std::endl;
-            std::cout << searched_configs.reserved_size << std::endl;
-            std::cout << "===================================" << std::endl;
-            // _active_blocks.clear();
-            apply_configs(original_configs);
+            _active_blocks.clear();
         }
         _trace.clear();
     }
