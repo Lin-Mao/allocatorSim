@@ -42,7 +42,7 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
         if (reserved_size >= current_reserved_size) {
             set_func(prev);
         } else {
-            log_configs(searched_configs, true);
+            log_configs(searched_configs, false);
         }
 
         current_reserved_size = std::min(current_reserved_size, reserved_size);
@@ -53,7 +53,6 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
 
 void allocatorMgr::search_configs() {
     log_configs(original_configs);
-    log_configs(searched_configs, false);
     for (size_t i = 0; i < CONFIG_NUMS; i++) {
         auto candidates = ALL_CANDIDATES[i];
         auto set_func = allocatorConf::set_funcs[i];
@@ -155,12 +154,14 @@ void allocatorMgr::report_configs() {
     int width = 36;
     std::cout << std::setw(width) << std::left << "###################### [Config result] ######################"
               << std::endl;
-    std::cout << std::setw(width) << std::left << "Max allocated size: " << original_configs.allocated_size
-              << " => " << searched_configs.allocated_size << " diff: "
+    std::cout << std::setw(width) << std::left << "Max allocated size: "
+              << static_cast<int64_t>(original_configs.allocated_size) << " => "
+              << static_cast<int64_t>(searched_configs.allocated_size) << " diff: "
               << static_cast<int64_t>(original_configs.allocated_size - searched_configs.allocated_size)
               << std::endl;
-    std::cout << std::setw(width) << std::left << "Max reserved size: " << original_configs.reserved_size
-              << " => " << searched_configs.reserved_size << " diff: "
+    std::cout << std::setw(width) << std::left << "Max reserved size: "
+              << static_cast<int64_t>(original_configs.reserved_size) << " => "
+              << static_cast<int64_t>(searched_configs.reserved_size) << " diff: "
               << static_cast<int64_t>(original_configs.reserved_size - searched_configs.reserved_size)
               << std::endl;
     std::cout << std::setw(width) << std::left << "kMinBlockSize: " << original_configs.kMinBlockSize << " => "
