@@ -125,6 +125,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
         // do something
     } else {
         if (initial_opt) {
+            group_blocks();
             search_configs();
             result = true;
             initial_opt = false;
@@ -257,6 +258,7 @@ void allocatorMgr::show_allocator_memory_usage() {
 }
 
 void allocatorMgr::group_blocks() {
+    group_enable_flag = true;
     std::set<size_t> block_sizes;
     for (auto t : _trace) {
         if (t.second.second > allocatorConf::get_kLargeBuffer()) {
@@ -270,12 +272,11 @@ void allocatorMgr::group_blocks() {
     for (auto it = block_sizes.begin(); it != block_sizes.end();) {
         if ((*it - small_group_size) / small_group_size > GROUP_DIFFERENCE) {
             group_boundary = *std::prev(it);
-            _GROUPS[index] = std::make_pair(group_boundary, group_boundary);
+            _GROUPS[index] =group_boundary;
             index++;
             small_group_size = *it;
             if (index == GROUP_NUMS-1) {
-                _GROUPS[index] = std::make_pair(
-                    *block_sizes.rbegin(), *block_sizes.rbegin());
+                _GROUPS[index] = *block_sizes.rbegin();
                 index++;
                 break;
             }
@@ -283,18 +284,62 @@ void allocatorMgr::group_blocks() {
         it++;
     }
     if (!block_sizes.empty() && group_boundary != *block_sizes.rbegin()) {
-        _GROUPS[index] = std::make_pair(
-                *block_sizes.rbegin(), *block_sizes.rbegin());
+        _GROUPS[index] = *block_sizes.rbegin();
         index++;
     }
 
     while (index < GROUP_NUMS) {
-        _GROUPS[index] = std::make_pair(
-            std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
+        _GROUPS[index] = std::numeric_limits<size_t>::max();
         index++;
     }
-    for (auto i : _GROUPS) {
-        std::cout << i.first << ": " << i.second << std::endl;
+    for (auto g : _GROUPS) {
+        std::cout << g << std::endl;
+    }
+}
+
+bool allocatorMgr::is_group_enable() {
+    return group_enable_flag;
+}
+
+size_t allocatorMgr::get_grouped_allocation_size(size_t size) {
+    if (size < _GROUPS[0]) {
+        if (_GROUPS[0] != std::numeric_limits<size_t>::max()) {
+            return _GROUPS[0];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < _GROUPS[1]) {
+        if (_GROUPS[1] != std::numeric_limits<size_t>::max()) {
+            return _GROUPS[1];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < _GROUPS[2]) {
+        if (_GROUPS[2] != std::numeric_limits<size_t>::max()) {
+            return _GROUPS[2];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < _GROUPS[3]) {
+        if (_GROUPS[3] != std::numeric_limits<size_t>::max()) {
+            return _GROUPS[3];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < _GROUPS[4]) {
+        if (_GROUPS[4] != std::numeric_limits<size_t>::max()) {
+            return _GROUPS[4];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else {
+        auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+        return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
     }
 }
 

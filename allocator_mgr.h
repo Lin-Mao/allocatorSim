@@ -105,7 +105,9 @@ private:
     };
 
     // pair: <boundary, size>
-    std::array<std::pair<size_t, size_t>, GROUP_NUMS> _GROUPS;
+    std::array<size_t, GROUP_NUMS> _GROUPS;
+
+    bool group_enable_flag = false;
 
 private:
     template<typename FUNC1, typename FUNC2, typename candidate_t>
@@ -151,6 +153,10 @@ public:
     void free_cpu_memory_chunk(char* pointer);
 
     void group_blocks();
+
+    bool is_group_enable();
+
+    size_t get_grouped_allocation_size(size_t size);
 
 };
 
