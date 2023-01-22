@@ -256,6 +256,48 @@ void allocatorMgr::show_allocator_memory_usage() {
               << format_size(memory_usage.second) << ")" << std::endl;
 }
 
+void allocatorMgr::group_blocks() {
+    std::set<size_t> block_sizes;
+    for (auto t : _trace) {
+        if (t.second.second > allocatorConf::get_kLargeBuffer()) {
+            block_sizes.insert(t.second.second);
+        }
+    }
+    std::cout << block_sizes.size() << std::endl;
+    size_t small_group_size = *block_sizes.begin();
+    size_t group_boundary = 0;
+    int index = 0;
+    for (auto it = block_sizes.begin(); it != block_sizes.end();) {
+        if ((*it - small_group_size) / small_group_size > GROUP_DIFFERENCE) {
+            group_boundary = *std::prev(it);
+            _GROUPS[index] = std::make_pair(group_boundary, group_boundary);
+            index++;
+            small_group_size = *it;
+            if (index == GROUP_NUMS-1) {
+                _GROUPS[index] = std::make_pair(
+                    *block_sizes.rbegin(), *block_sizes.rbegin());
+                index++;
+                break;
+            }
+        }
+        it++;
+    }
+    if (!block_sizes.empty() && group_boundary != *block_sizes.rbegin()) {
+        _GROUPS[index] = std::make_pair(
+                *block_sizes.rbegin(), *block_sizes.rbegin());
+        index++;
+    }
+
+    while (index < GROUP_NUMS) {
+        _GROUPS[index] = std::make_pair(
+            std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
+        index++;
+    }
+    for (auto i : _GROUPS) {
+        std::cout << i.first << ": " << i.second << std::endl;
+    }
+}
+
 }  // namespace c10
 }  // namespace cuda
 }  // namespace AllocatorSim
