@@ -297,10 +297,6 @@ void allocatorMgr::group_blocks() {
     }
 }
 
-bool allocatorMgr::is_group_enable() {
-    return group_enable_flag;
-}
-
 size_t allocatorMgr::get_grouped_allocation_size(size_t size) {
     if (size < _GROUPS[0]) {
         if (_GROUPS[0] != std::numeric_limits<size_t>::max()) {
@@ -342,6 +338,22 @@ size_t allocatorMgr::get_grouped_allocation_size(size_t size) {
         return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
     }
 }
+
+size_t allocatorMgr::get_allocation_size(size_t size) {
+    if (group_enable_flag) {
+        return get_grouped_allocation_size(size);
+    }
+    auto tunablekSmallSize = AllocatorSim::allocatorConf::get_kSmallSize();
+    if (size <= tunablekSmallSize) {
+        return AllocatorSim::allocatorConf::get_kSmallBuffer();
+    } else if (size < AllocatorSim::allocatorConf::get_kMinLargeAlloc()) {
+        return AllocatorSim::allocatorConf::get_kLargeBuffer();
+    } else {
+        auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+        return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+    }
+}
+
 
 }  // namespace c10
 }  // namespace cuda

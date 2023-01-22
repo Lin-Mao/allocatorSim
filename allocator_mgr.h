@@ -158,6 +158,8 @@ public:
 
     size_t get_grouped_allocation_size(size_t size);
 
+    size_t get_allocation_size(size_t size);
+
 };
 
 }  // namespace c10
