@@ -8,9 +8,6 @@ namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
-#define GROUP_NUMS 5
-#define GROUP_DIFFERENCE 0.8
-
 struct Configs {
     size_t kMinBlockSize;
     size_t kSmallSize;
@@ -104,9 +101,6 @@ private:
         kLargeBuffer_candidates, kMinLargeAlloc_candidates, kRoundLarge_candidates
     };
 
-    // pair: <boundary, size>
-    std::array<size_t, GROUP_NUMS> _GROUPS;
-
     bool group_enable_flag = false;
 
 private:
@@ -153,8 +147,6 @@ public:
     void free_cpu_memory_chunk(char* pointer);
 
     void group_blocks();
-
-    bool is_group_enable();
 
     size_t get_grouped_allocation_size(size_t size);
 

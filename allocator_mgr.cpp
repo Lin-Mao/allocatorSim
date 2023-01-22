@@ -77,7 +77,7 @@ void allocatorMgr::search_configs() {
     }
     apply_configs(searched_configs);
     log_configs(searched_configs);
-    report_configs();
+    // report_configs();
 }
 
 void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
@@ -125,6 +125,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
         // do something
     } else {
         if (initial_opt) {
+            current_reserved_size = simulate_allocator().second;
             group_blocks();
             search_configs();
             result = true;
@@ -258,7 +259,6 @@ void allocatorMgr::show_allocator_memory_usage() {
 }
 
 void allocatorMgr::group_blocks() {
-    group_enable_flag = true;
     std::set<size_t> block_sizes;
     for (auto t : _trace) {
         if (t.second.second > allocatorConf::get_kLargeBuffer()) {
@@ -272,11 +272,11 @@ void allocatorMgr::group_blocks() {
     for (auto it = block_sizes.begin(); it != block_sizes.end();) {
         if ((*it - small_group_size) / small_group_size > GROUP_DIFFERENCE) {
             group_boundary = *std::prev(it);
-            _GROUPS[index] =group_boundary;
+            allocatorConf::_GROUPS[index] =group_boundary;
             index++;
             small_group_size = *it;
             if (index == GROUP_NUMS-1) {
-                _GROUPS[index] = *block_sizes.rbegin();
+                allocatorConf::_GROUPS[index] = *block_sizes.rbegin();
                 index++;
                 break;
             }
@@ -284,51 +284,55 @@ void allocatorMgr::group_blocks() {
         it++;
     }
     if (!block_sizes.empty() && group_boundary != *block_sizes.rbegin()) {
-        _GROUPS[index] = *block_sizes.rbegin();
-        index++;
+        allocatorConf::_GROUPS[index] = *block_sizes.rbegin();
     }
 
-    while (index < GROUP_NUMS) {
-        _GROUPS[index] = std::numeric_limits<size_t>::max();
-        index++;
-    }
-    for (auto g : _GROUPS) {
+    for (auto g : allocatorConf::_GROUPS) {
         std::cout << g << std::endl;
     }
+
+    alloc_sim.set_group_enable_flag_sim(true);
+    auto reserved_size = simulate_allocator().second;
+    if (reserved_size < current_reserved_size) {
+        group_enable_flag = true;
+    } else {
+        alloc_sim.set_group_enable_flag_sim(false);
+    }
+
 }
 
 size_t allocatorMgr::get_grouped_allocation_size(size_t size) {
-    if (size < _GROUPS[0]) {
-        if (_GROUPS[0] != std::numeric_limits<size_t>::max()) {
-            return _GROUPS[0];
+    if (size < allocatorConf::_GROUPS[0]) {
+        if (allocatorConf::_GROUPS[0] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[0];
         } else {
             auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
             return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
         }
-    } else if (size < _GROUPS[1]) {
-        if (_GROUPS[1] != std::numeric_limits<size_t>::max()) {
-            return _GROUPS[1];
+    } else if (size < allocatorConf::_GROUPS[1]) {
+        if (allocatorConf::_GROUPS[1] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[1];
         } else {
             auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
             return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
         }
-    } else if (size < _GROUPS[2]) {
-        if (_GROUPS[2] != std::numeric_limits<size_t>::max()) {
-            return _GROUPS[2];
+    } else if (size < allocatorConf::_GROUPS[2]) {
+        if (allocatorConf::_GROUPS[2] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[2];
         } else {
             auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
             return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
         }
-    } else if (size < _GROUPS[3]) {
-        if (_GROUPS[3] != std::numeric_limits<size_t>::max()) {
-            return _GROUPS[3];
+    } else if (size < allocatorConf::_GROUPS[3]) {
+        if (allocatorConf::_GROUPS[3] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[3];
         } else {
             auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
             return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
         }
-    } else if (size < _GROUPS[4]) {
-        if (_GROUPS[4] != std::numeric_limits<size_t>::max()) {
-            return _GROUPS[4];
+    } else if (size < allocatorConf::_GROUPS[4]) {
+        if (allocatorConf::_GROUPS[4] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[4];
         } else {
             auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
             return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
@@ -340,16 +344,16 @@ size_t allocatorMgr::get_grouped_allocation_size(size_t size) {
 }
 
 size_t allocatorMgr::get_allocation_size(size_t size) {
-    if (group_enable_flag) {
+    if (group_enable_flag && size > allocatorConf::get_kLargeBuffer()) {
         return get_grouped_allocation_size(size);
     }
-    auto tunablekSmallSize = AllocatorSim::allocatorConf::get_kSmallSize();
+    auto tunablekSmallSize = allocatorConf::get_kSmallSize();
     if (size <= tunablekSmallSize) {
-        return AllocatorSim::allocatorConf::get_kSmallBuffer();
-    } else if (size < AllocatorSim::allocatorConf::get_kMinLargeAlloc()) {
-        return AllocatorSim::allocatorConf::get_kLargeBuffer();
+        return allocatorConf::get_kSmallBuffer();
+    } else if (size < allocatorConf::get_kMinLargeAlloc()) {
+        return allocatorConf::get_kLargeBuffer();
     } else {
-        auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+        auto tunablekRoundLarge = allocatorConf::get_kRoundLarge();
         return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
     }
 }

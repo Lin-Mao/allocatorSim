@@ -14,6 +14,8 @@ namespace cuda {
 namespace AllocatorSim {
 
 #define CONFIG_NUMS 6
+#define GROUP_NUMS 5
+#define GROUP_DIFFERENCE 0.8
 
 using SET_FUNC = void(*)(size_t);
 using GET_FUNC = size_t(*)();
@@ -37,6 +39,9 @@ private:
 public:
     static std::array<SET_FUNC, CONFIG_NUMS> set_funcs;
     static std::array<GET_FUNC, CONFIG_NUMS> get_funcs;
+
+    // pair: <boundary, size>
+    static std::array<size_t, GROUP_NUMS> _GROUPS;
 
     static size_t get_kMinBlockSize();
 

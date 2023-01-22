@@ -27,6 +27,8 @@ private:
 
     allocatorProf* allocator_prof;
 
+    bool group_enable_flag_sim = false;
+
 private:
     size_t round_size(size_t ori_size);
 
@@ -54,6 +56,8 @@ private:
 
     void release_blocks(BlockPool& pool);
 
+    size_t get_grouped_allocation_size_sim(size_t size);
+
 public:
     allocatorSim();
 
@@ -70,6 +74,9 @@ public:
     std::pair<size_t, size_t> get_max_memory_usage();
 
     void set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes);
+
+    void set_group_enable_flag_sim(bool flag);
+
 };
 
 }  // namespace c10

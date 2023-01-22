@@ -25,6 +25,14 @@ std::array<GET_FUNC, CONFIG_NUMS> allocatorConf::get_funcs = {
     get_kLargeBuffer, get_kMinLargeAlloc, get_kRoundLarge
 };
 
+std::array<size_t, GROUP_NUMS> allocatorConf::_GROUPS = {
+    std::numeric_limits<size_t>::max(),
+    std::numeric_limits<size_t>::max(),
+    std::numeric_limits<size_t>::max(),
+    std::numeric_limits<size_t>::max(),
+    std::numeric_limits<size_t>::max()
+};
+
 size_t allocatorConf::m_max_split_size = std::numeric_limits<size_t>::max();
 
 size_t allocatorConf::m_roundup_power2_divisions = 0;

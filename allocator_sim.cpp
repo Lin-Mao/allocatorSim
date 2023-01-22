@@ -72,7 +72,56 @@ BlockPool& allocatorSim::get_pool(size_t size, int stream) {
     }
 }
 
+size_t allocatorSim::get_grouped_allocation_size_sim(size_t size) {
+    if (size < allocatorConf::_GROUPS[0]) {
+        if (allocatorConf::_GROUPS[0] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[0];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < allocatorConf::_GROUPS[1]) {
+        if (allocatorConf::_GROUPS[1] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[1];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < allocatorConf::_GROUPS[2]) {
+        if (allocatorConf::_GROUPS[2] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[2];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < allocatorConf::_GROUPS[3]) {
+        if (allocatorConf::_GROUPS[3] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[3];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else if (size < allocatorConf::_GROUPS[4]) {
+        if (allocatorConf::_GROUPS[4] != std::numeric_limits<size_t>::max()) {
+            return allocatorConf::_GROUPS[4];
+        } else {
+            auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+            return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+        }
+    } else {
+        auto tunablekRoundLarge = AllocatorSim::allocatorConf::get_kRoundLarge();
+        return tunablekRoundLarge * ((size + tunablekRoundLarge - 1) / tunablekRoundLarge);
+    }
+}
+
+void allocatorSim::set_group_enable_flag_sim(bool flag) {
+    group_enable_flag_sim = flag;
+}
+
 size_t allocatorSim::get_allocation_size(size_t size) {
+    if (group_enable_flag_sim && size > allocatorConf::get_kLargeBuffer()) {
+        return get_grouped_allocation_size_sim(size);
+    }
     if (size <= allocatorConf::get_kSmallSize()) {
         return allocatorConf::get_kSmallBuffer();
     } else if (size < allocatorConf::get_kMinLargeAlloc()) {
