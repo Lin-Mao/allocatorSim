@@ -15,6 +15,7 @@ struct Configs {
     size_t kLargeBuffer;
     size_t kMinLargeAlloc;
     size_t kRoundLarge;
+    float difference;
 
     size_t m_max_split_size;
     size_t m_roundup_power2_divisions;
@@ -35,6 +36,7 @@ struct Configs {
         size_t kLargeBuffer,
         size_t kMinLargeAlloc,
         size_t kRoundLarge,
+        float difference,
         size_t m_max_split_size,
         size_t m_roundup_power2_divisions,
         size_t m_roundup_bypass_threshold,
@@ -49,6 +51,7 @@ struct Configs {
             kLargeBuffer(kLargeBuffer),
             kMinLargeAlloc(kMinLargeAlloc),
             kRoundLarge(kRoundLarge),
+            difference(difference),
 
             m_max_split_size(m_max_split_size),
             m_roundup_power2_divisions(m_roundup_power2_divisions),
@@ -67,10 +70,11 @@ struct Configs {
         size_t kLargeBuffer,
         size_t kMinLargeAlloc,
         size_t kRoundLarge,
+        float difference,
         size_t allocated_size,
         size_t reserved_size)
           : Configs(kMinBlockSize, kSmallSize, kSmallBuffer, kLargeBuffer,
-            kMinLargeAlloc, kRoundLarge, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
+            kMinLargeAlloc, kRoundLarge, 0.0, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
 };
 
 class allocatorMgr {
@@ -93,8 +97,8 @@ private:
     const std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5, 20971520*6};
     const std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2, 20971520*3};
     const std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10, 10485760*12};
-    const std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12,
-    2097152*14, 2097152*16, 2097152*18, 2097152*20, 2097152*22, 2097152*24, 2097152*26, 2097152*28, 2097152*30, 2097152*32};
+    const std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12, 2097152*14, 2097152*16};
+    const std::set<float> GROUP_DIFFERENCES {0.2, 0.4, 0.6, 0.8, 1.2, 1.4, 1.6, 1.8, 2.0};
 
     std::array<std::set<size_t>, CONFIG_NUMS> ALL_CANDIDATES = {
         kMinBlockSize_candidates, kSmallSize_candidates, kSmallBuffer_candidates,
@@ -102,6 +106,8 @@ private:
     };
 
     bool group_enable_flag = false;
+
+    float current_difference = 0.0;
 
 private:
     template<typename FUNC1, typename FUNC2, typename candidate_t>
@@ -146,7 +152,7 @@ public:
 
     void free_cpu_memory_chunk(char* pointer);
 
-    void group_blocks();
+    void group_blocks(const float& difference);
 
     size_t get_grouped_allocation_size(size_t size);
 

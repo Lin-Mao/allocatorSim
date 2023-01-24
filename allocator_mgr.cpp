@@ -74,6 +74,11 @@ void allocatorMgr::search_configs() {
                     ALL_CANDIDATES[j]);
             }
         }
+
+        for (float diff : GROUP_DIFFERENCES) {
+            current_difference = diff;
+            group_blocks(current_difference);
+        }
     }
     apply_configs(searched_configs);
     log_configs(searched_configs);
@@ -92,6 +97,7 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
         allocatorConf::get_kLargeBuffer(),
         allocatorConf::get_kMinLargeAlloc(),
         allocatorConf::get_kRoundLarge(),
+        current_difference,
         memory_usage.first,
         memory_usage.second
     );
@@ -126,7 +132,6 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     } else {
         if (initial_opt) {
             current_reserved_size = simulate_allocator().second;
-            group_blocks();
             search_configs();
             result = true;
             initial_opt = false;
@@ -258,19 +263,22 @@ void allocatorMgr::show_allocator_memory_usage() {
               << format_size(memory_usage.second) << ")" << std::endl;
 }
 
-void allocatorMgr::group_blocks() {
+void allocatorMgr::group_blocks(const float& difference) {
     std::set<size_t> block_sizes;
     for (auto t : _trace) {
         if (t.second.second > allocatorConf::get_kLargeBuffer()) {
             block_sizes.insert(t.second.second);
         }
     }
-    std::cout << block_sizes.size() << std::endl;
+
+    for (int i = 0; i < GROUP_NUMS; i++) {
+        allocatorConf::_GROUPS[i] = std::numeric_limits<size_t>::max();
+    }
     size_t small_group_size = *block_sizes.begin();
     size_t group_boundary = 0;
     int index = 0;
     for (auto it = block_sizes.begin(); it != block_sizes.end();) {
-        if ((*it - small_group_size) / small_group_size > GROUP_DIFFERENCE) {
+        if ((*it - small_group_size) / small_group_size > difference) {
             group_boundary = *std::prev(it);
             allocatorConf::_GROUPS[index] =group_boundary;
             index++;
@@ -287,9 +295,10 @@ void allocatorMgr::group_blocks() {
         allocatorConf::_GROUPS[index] = *block_sizes.rbegin();
     }
 
-    for (auto g : allocatorConf::_GROUPS) {
-        std::cout << g << std::endl;
-    }
+    // for (auto g : allocatorConf::_GROUPS) {
+    //     std::cout << g << std::endl;
+    // }
+    // std::cout << std::endl;
 
     alloc_sim.set_group_enable_flag_sim(true);
     auto reserved_size = simulate_allocator().second;

@@ -15,7 +15,6 @@ namespace AllocatorSim {
 
 #define CONFIG_NUMS 6
 #define GROUP_NUMS 5
-#define GROUP_DIFFERENCE 0.8
 
 using SET_FUNC = void(*)(size_t);
 using GET_FUNC = size_t(*)();
