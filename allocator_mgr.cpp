@@ -70,7 +70,7 @@ void allocatorMgr::allocator_assert(bool expr) {
     if (expr) {
         return;
     } else {
-        report_configs();
+        report_configs(original_configs, searched_configs);
         assert(expr);
     }
 }
@@ -124,7 +124,7 @@ void allocatorMgr::search_config() {
     apply_configs(prev_conf);
     evaluate_allocator(prev_conf, prev_conf);
     log_configs(searched_configs);
-    report_configs();
+    report_configs(original_configs, searched_configs);
 
     // for search_config_with_group
     reset_allocator_memory_usage();
@@ -134,7 +134,7 @@ void allocatorMgr::search_config() {
 
 // after search group
 void allocatorMgr::search_config_with_group() {
-    log_configs(searched_configs);
+    auto conf_backup = searched_configs;
     auto prev_conf = searched_configs;
     for (auto kMinBlockSize : kMinBlockSize_candidates) {
         for (auto kSmallSize : kSmallSize_candidates) {
@@ -160,6 +160,9 @@ void allocatorMgr::search_config_with_group() {
                                     allocatorConf::BACKUP_GROUPS = allocatorConf::_GROUPS;
                                     alloc_sim.set_group_enable_flag_sim(true);
                                     group_enable_flag = true;
+                                } else if(group_enable_flag) {
+                                    // rollback
+                                    allocatorConf::_GROUPS = allocatorConf::BACKUP_GROUPS;
                                 }
                                 reset_allocator_memory_usage();
                                 empty_cache();
@@ -173,8 +176,9 @@ void allocatorMgr::search_config_with_group() {
         }
     }
     apply_configs(prev_conf);
+    evaluate_allocator(prev_conf, prev_conf);
     log_configs(searched_configs);
-    report_configs();
+    report_configs(conf_backup, searched_configs);
 }
 
 void allocatorMgr::search_configs() {
@@ -203,7 +207,7 @@ void allocatorMgr::search_configs() {
     }
     apply_configs(searched_configs);
     log_configs(searched_configs);
-    report_configs();
+    report_configs(original_configs, searched_configs);
 }
 
 void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
@@ -282,49 +286,49 @@ size_t allocatorMgr::simulate_allocator() {
     return reserved_size;
 }
 
-void allocatorMgr::report_configs() {
+void allocatorMgr::report_configs(const Configs& conf_before, const Configs& conf_after) {
     int width = 36;
-    std::cout << std::setw(width) << std::left << "###################### [Config result] ######################"
-              << std::endl;
+    std::cout << std::setw(width) << std::left
+              << "###################### [Config result] ######################" << std::endl;
     std::cout << std::setw(width) << std::left << "Max allocated size: "
-              << static_cast<int64_t>(original_configs.allocated_size) << " => "
-              << static_cast<int64_t>(searched_configs.allocated_size) << " diff: "
-              << static_cast<int64_t>(original_configs.allocated_size - searched_configs.allocated_size)
+              << static_cast<int64_t>(conf_before.allocated_size) << " => "
+              << static_cast<int64_t>(conf_after.allocated_size) << " diff: "
+              << static_cast<int64_t>(conf_before.allocated_size - conf_after.allocated_size)
               << std::endl;
     std::cout << std::setw(width) << std::left << "Max reserved size: "
-              << static_cast<int64_t>(original_configs.reserved_size) << " => "
-              << static_cast<int64_t>(searched_configs.reserved_size) << " diff: "
-              << static_cast<int64_t>(original_configs.reserved_size - searched_configs.reserved_size)
+              << static_cast<int64_t>(conf_before.reserved_size) << " => "
+              << static_cast<int64_t>(conf_after.reserved_size) << " diff: "
+              << static_cast<int64_t>(conf_before.reserved_size - conf_after.reserved_size)
               << std::endl;
-    std::cout << std::setw(width) << std::left << "kMinBlockSize: " << original_configs.kMinBlockSize << " => "
-              << searched_configs.kMinBlockSize << std::endl;
-    std::cout << std::setw(width) << std::left << "kSmallSize: " << original_configs.kSmallSize << " => "
-              << searched_configs.kSmallSize << std::endl;
-    std::cout << std::setw(width) << std::left << "kSmallBuffer: " << original_configs.kSmallBuffer << " => "
-              << searched_configs.kSmallBuffer << std::endl;
-    std::cout << std::setw(width) << std::left << "kLargeBuffer: " << original_configs.kLargeBuffer << " => "
-              << searched_configs.kLargeBuffer << std::endl;
-    std::cout << std::setw(width) << std::left << "kMinLargeAlloc: " << original_configs.kMinLargeAlloc << " => "
-              << searched_configs.kMinLargeAlloc << std::endl;
-    std::cout << std::setw(width) << std::left << "kRoundLarge: " << original_configs.kRoundLarge << " => "
-              << searched_configs.kRoundLarge << std::endl;
-    std::cout << std::setw(width) << std::left << "m_max_split_size: " << original_configs.m_max_split_size
-              << " => " << searched_configs.m_max_split_size << std::endl;
+    std::cout << std::setw(width) << std::left << "kMinBlockSize: " << conf_before.kMinBlockSize << " => "
+              << conf_after.kMinBlockSize << std::endl;
+    std::cout << std::setw(width) << std::left << "kSmallSize: " << conf_before.kSmallSize << " => "
+              << conf_after.kSmallSize << std::endl;
+    std::cout << std::setw(width) << std::left << "kSmallBuffer: " << conf_before.kSmallBuffer << " => "
+              << conf_after.kSmallBuffer << std::endl;
+    std::cout << std::setw(width) << std::left << "kLargeBuffer: " << conf_before.kLargeBuffer << " => "
+              << conf_after.kLargeBuffer << std::endl;
+    std::cout << std::setw(width) << std::left << "kMinLargeAlloc: " << conf_before.kMinLargeAlloc << " => "
+              << conf_after.kMinLargeAlloc << std::endl;
+    std::cout << std::setw(width) << std::left << "kRoundLarge: " << conf_before.kRoundLarge << " => "
+              << conf_after.kRoundLarge << std::endl;
+    std::cout << std::setw(width) << std::left << "m_max_split_size: " << conf_before.m_max_split_size
+              << " => " << conf_after.m_max_split_size << std::endl;
     std::cout << std::setw(width) << std::left << "m_roundup_power2_divisions: "
-              << original_configs.m_roundup_power2_divisions << " => "
-              << searched_configs.m_roundup_power2_divisions << std::endl;
+              << conf_before.m_roundup_power2_divisions << " => "
+              << conf_after.m_roundup_power2_divisions << std::endl;
     std::cout << std::setw(width) << std::left << "m_roundup_bypass_threshold: "
-              << original_configs.m_roundup_bypass_threshold << " => "
-              << searched_configs.m_roundup_bypass_threshold << std::endl;
+              << conf_before.m_roundup_bypass_threshold << " => "
+              << conf_after.m_roundup_bypass_threshold << std::endl;
     std::cout << std::setw(width) << std::left << "m_garbage_collection_threshold: "
-              << original_configs.m_garbage_collection_threshold << " => "
-              << searched_configs.m_garbage_collection_threshold << std::endl;
+              << conf_before.m_garbage_collection_threshold << " => "
+              << conf_after.m_garbage_collection_threshold << std::endl;
     std::cout << std::setw(width) << std::left << "m_memory_segment_address_start: "
-              << original_configs.m_memory_segment_address_start << " => "
-              << searched_configs.m_memory_segment_address_start << std::endl;
+              << conf_before.m_memory_segment_address_start << " => "
+              << conf_after.m_memory_segment_address_start << std::endl;
     std::cout << std::setw(width) << std::left << "m_memory_segment_address_interval: "
-              << original_configs.m_memory_segment_address_interval << " => "
-              << searched_configs.m_memory_segment_address_interval << std::endl;
+              << conf_before.m_memory_segment_address_interval << " => "
+              << conf_after.m_memory_segment_address_interval << std::endl;
     std::cout << "############################################################" << std::endl;
 }
 

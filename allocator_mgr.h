@@ -117,7 +117,7 @@ private:
 
     void apply_configs(const Configs& configs);
 
-    void report_configs();
+    void report_configs(const Configs& conf1, const Configs& conf2);
 
     void malloc_block(size_t orig_size, size_t ref);
 
