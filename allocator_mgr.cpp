@@ -75,16 +75,17 @@ void allocatorMgr::allocator_assert(bool expr) {
     }
 }
 
-Configs allocatorMgr::evaluate_allocator(Configs configs, Configs prev_conf) {
+bool allocatorMgr::evaluate_allocator(Configs configs, Configs prev_conf) {
     apply_configs(configs);
     auto reserved_size = simulate_allocator();
     if (reserved_size < current_reserved_size) {
         current_reserved_size = std::min(current_reserved_size, reserved_size);
-        return configs;
+        std::cout << "reserved size: " << reserved_size << std::endl;
+        return true;
     } else {
         apply_configs(prev_conf);
     }
-    return prev_conf;
+    return false;
 }
 
 void allocatorMgr::search_config() {
@@ -106,8 +107,10 @@ void allocatorMgr::search_config() {
                             if(!check_configs(searched_configs)) {
                                 continue;
                             }
-                            search_group();
-                            prev_conf = evaluate_allocator(searched_configs, prev_conf);
+
+                            if (evaluate_allocator(searched_configs, prev_conf)) {
+                                prev_conf = searched_configs;
+                            }
                             reset_allocator_memory_usage();
                             empty_cache();
                         }
@@ -118,7 +121,58 @@ void allocatorMgr::search_config() {
             }
         }
     }
-    apply_configs(original_configs);
+    apply_configs(prev_conf);
+    evaluate_allocator(prev_conf, prev_conf);
+    log_configs(searched_configs);
+    report_configs();
+
+    // for search_config_with_group
+    reset_allocator_memory_usage();
+    empty_cache();
+    search_config_with_group();
+}
+
+// after search group
+void allocatorMgr::search_config_with_group() {
+    log_configs(searched_configs);
+    auto prev_conf = searched_configs;
+    for (auto kMinBlockSize : kMinBlockSize_candidates) {
+        for (auto kSmallSize : kSmallSize_candidates) {
+            for (auto kSmallBuffer : kSmallBuffer_candidates) {
+                for (auto kLargeBuffer : kLargeBuffer_candidates) {
+                    for (auto kMinLargeAlloc : kMinLargeAlloc_candidates) {
+                        for (auto kRoundLarge : kRoundLarge_candidates) {
+                            searched_configs = Configs(
+                                kMinBlockSize,
+                                kSmallSize,
+                                kSmallBuffer,
+                                kLargeBuffer,
+                                kMinLargeAlloc,
+                                kRoundLarge, 0, 0);
+                            if(!check_configs(searched_configs)) {
+                                continue;
+                            }
+                            for (auto diff : GROUP_DIFFERENCES) {
+                                group_blocks(diff);
+                                if (evaluate_allocator(searched_configs, prev_conf)) {
+                                    prev_conf = searched_configs;
+                                    current_difference = diff;
+                                    allocatorConf::BACKUP_GROUPS = allocatorConf::_GROUPS;
+                                    alloc_sim.set_group_enable_flag_sim(true);
+                                    group_enable_flag = true;
+                                }
+                                reset_allocator_memory_usage();
+                                empty_cache();
+                            }
+                        }
+
+                    }
+
+                }
+            }
+        }
+    }
+    apply_configs(prev_conf);
     log_configs(searched_configs);
     report_configs();
 }
@@ -373,20 +427,6 @@ void allocatorMgr::group_blocks(const float& difference) {
     if (!block_sizes.empty() && group_boundary != *block_sizes.rbegin()) {
         allocatorConf::_GROUPS[index] = *block_sizes.rbegin();
     }
-
-    // for (auto g : allocatorConf::_GROUPS) {
-    //     std::cout << g << std::endl;
-    // }
-    // std::cout << std::endl;
-
-    alloc_sim.set_group_enable_flag_sim(true);
-    auto reserved_size = simulate_allocator();
-    if (reserved_size < current_reserved_size) {
-        group_enable_flag = true;
-    } else {
-        alloc_sim.set_group_enable_flag_sim(false);
-    }
-
 }
 
 size_t allocatorMgr::get_grouped_allocation_size(size_t size) {

@@ -94,7 +94,7 @@ private:
     const std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2};
     const std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10};
     const std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12};
-    const std::set<float> GROUP_DIFFERENCES {0.2, 0.4, 0.6, 0.8, 1.2, 1.4, 1.6, 1.8, 2.0};
+    const std::set<float> GROUP_DIFFERENCES {0.2, 0.6, 1.2, 1.6, 2.0};
 
     std::array<std::set<size_t>, CONFIG_NUMS> ALL_CANDIDATES = {
         kMinBlockSize_candidates, kSmallSize_candidates, kSmallBuffer_candidates,
@@ -125,9 +125,12 @@ private:
 
     void free_block();
 
-    Configs evaluate_allocator(Configs configs, Configs prev_conf);
+    // true means new config works
+    bool evaluate_allocator(Configs configs, Configs prev_conf);
 
     void search_group();
+
+    void search_config_with_group();
 
     void allocator_assert(bool expr);
     

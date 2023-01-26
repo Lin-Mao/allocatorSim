@@ -42,6 +42,8 @@ public:
     // pair: <boundary, size>
     static std::array<size_t, GROUP_NUMS> _GROUPS;
 
+    static std::array<size_t, GROUP_NUMS> BACKUP_GROUPS;
+
     static size_t get_kMinBlockSize();
 
     static void set_kMinBlockSize(size_t size);
