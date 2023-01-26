@@ -82,7 +82,7 @@ private:
     
     uint64_t op_id = 0;
     bool initial_opt = true;
-    size_t current_reserved_size;
+    size_t current_reserved_size = std::numeric_limits<size_t>::max();
     std::map<void*, std::pair<uint64_t, size_t>> _active_blocks;
     blockMap_t _trace;
     Configs original_configs;
@@ -90,7 +90,7 @@ private:
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
-    const std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5};
+    const std::set<size_t> kSmallBuffer_candidates {2097152, 2097152*2, 2097152*3, 2097152*4, 2097152*5};
     const std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2};
     const std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10};
     const std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12};
@@ -110,6 +110,8 @@ private:
     void search_candidates(FUNC1 get_func, FUNC2 set_func, std::set<candidate_t> candidates);
 
     bool check_constraints();
+
+    bool check_configs(Configs& config);
 
     void log_configs(Configs& configs, bool get_mem = true);
 
@@ -136,7 +138,9 @@ public:
 
     void empty_cache();
 
-    size_t get_max_reserved_bytes();
+    size_t get_reserved_bytes();
+
+    size_t get_allocated_bytes();
 
     std::pair<size_t, size_t> get_allocator_memory_usage();
 
@@ -144,7 +148,7 @@ public:
 
     void show_allocator_memory_usage();
 
-    std::pair<size_t, size_t> simulate_allocator();
+    size_t simulate_allocator();
 
     void collect_trace(void* ptr, int64_t size);
 

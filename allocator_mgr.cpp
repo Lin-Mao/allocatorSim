@@ -38,7 +38,7 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
             continue;
         }
         
-        auto reserved_size = simulate_allocator().second;
+        auto reserved_size = simulate_allocator();
         if (reserved_size >= current_reserved_size) {
             set_func(prev);
         } else {
@@ -49,6 +49,14 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
         reset_allocator_memory_usage();
         empty_cache();
     }
+}
+
+bool allocatorMgr::check_configs(Configs& config) {
+    if (config.kMinLargeAlloc >= config.kLargeBuffer) {
+        return false;
+    }
+
+    return true;
 }
 
 void allocatorMgr::search_group() {
@@ -69,7 +77,7 @@ void allocatorMgr::allocator_assert(bool expr) {
 
 Configs allocatorMgr::evaluate_allocator(Configs configs, Configs prev_conf) {
     apply_configs(configs);
-    auto reserved_size = simulate_allocator().second;
+    auto reserved_size = simulate_allocator();
     if (reserved_size < current_reserved_size) {
         current_reserved_size = std::min(current_reserved_size, reserved_size);
         return configs;
@@ -95,7 +103,10 @@ void allocatorMgr::search_config() {
                                 kLargeBuffer,
                                 kMinLargeAlloc,
                                 kRoundLarge, 0, 0);
-                            // search_group();
+                            if(!check_configs(searched_configs)) {
+                                continue;
+                            }
+                            search_group();
                             prev_conf = evaluate_allocator(searched_configs, prev_conf);
                             reset_allocator_memory_usage();
                             empty_cache();
@@ -142,9 +153,11 @@ void allocatorMgr::search_configs() {
 }
 
 void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
-    auto memory_usage = std::make_pair(0, 0);
+    size_t reserved_size = 0;
+    size_t allocated_size = 0;
     if (get_mem) {
-        memory_usage = simulate_allocator();
+        reserved_size = get_reserved_bytes();
+        allocated_size = get_allocated_bytes();
     }
     configs = Configs(
         allocatorConf::get_kMinBlockSize(),
@@ -153,8 +166,8 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
         allocatorConf::get_kLargeBuffer(),
         allocatorConf::get_kMinLargeAlloc(),
         allocatorConf::get_kRoundLarge(),
-        memory_usage.first,
-        memory_usage.second
+        reserved_size,
+        allocated_size
     );
 }
 
@@ -186,8 +199,8 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
         // do something
     } else {
         if (initial_opt) {
-            current_reserved_size = simulate_allocator().second;
-            search_configs();
+            current_reserved_size = simulate_allocator();
+            search_config();
             result = true;
             initial_opt = false;
             _active_blocks.clear();
@@ -197,7 +210,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     return result;
 }
 
-std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
+size_t allocatorMgr::simulate_allocator() {
     for (uint64_t i = 0; i <= op_id; i++) {
         auto block = _trace.find(i);
         if (block != _trace.end()) {
@@ -207,9 +220,12 @@ std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
         update_block_reference();
         free_block();
     }
-    std::pair<size_t, size_t> memory_usage = get_allocator_memory_usage();
-    allocator_assert(memory_usage.first <= memory_usage.second);
-    return memory_usage;
+
+    auto reserved_size = get_reserved_bytes();
+    auto allocated_size = get_allocated_bytes();
+
+    allocator_assert(reserved_size > allocated_size);
+    return reserved_size;
 }
 
 void allocatorMgr::report_configs() {
@@ -306,8 +322,12 @@ std::pair<size_t, size_t> allocatorMgr::get_allocator_memory_usage() {
     return alloc_sim.get_max_memory_usage();
 }
 
-size_t allocatorMgr::get_max_reserved_bytes() {
+size_t allocatorMgr::get_reserved_bytes() {
     return alloc_sim.get_max_reserved_bytes();
+}
+
+size_t allocatorMgr::get_allocated_bytes() {
+    return alloc_sim.get_max_allocated_bytes();
 }
 
 void allocatorMgr::reset_allocator_memory_usage() {
@@ -360,7 +380,7 @@ void allocatorMgr::group_blocks(const float& difference) {
     // std::cout << std::endl;
 
     alloc_sim.set_group_enable_flag_sim(true);
-    auto reserved_size = simulate_allocator().second;
+    auto reserved_size = simulate_allocator();
     if (reserved_size < current_reserved_size) {
         group_enable_flag = true;
     } else {
