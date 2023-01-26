@@ -15,7 +15,6 @@ struct Configs {
     size_t kLargeBuffer;
     size_t kMinLargeAlloc;
     size_t kRoundLarge;
-    float difference;
 
     size_t m_max_split_size;
     size_t m_roundup_power2_divisions;
@@ -36,7 +35,6 @@ struct Configs {
         size_t kLargeBuffer,
         size_t kMinLargeAlloc,
         size_t kRoundLarge,
-        float difference,
         size_t m_max_split_size,
         size_t m_roundup_power2_divisions,
         size_t m_roundup_bypass_threshold,
@@ -51,7 +49,6 @@ struct Configs {
             kLargeBuffer(kLargeBuffer),
             kMinLargeAlloc(kMinLargeAlloc),
             kRoundLarge(kRoundLarge),
-            difference(difference),
 
             m_max_split_size(m_max_split_size),
             m_roundup_power2_divisions(m_roundup_power2_divisions),
@@ -70,11 +67,10 @@ struct Configs {
         size_t kLargeBuffer,
         size_t kMinLargeAlloc,
         size_t kRoundLarge,
-        float difference,
         size_t allocated_size,
         size_t reserved_size)
           : Configs(kMinBlockSize, kSmallSize, kSmallBuffer, kLargeBuffer,
-            kMinLargeAlloc, kRoundLarge, 0.0, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
+            kMinLargeAlloc, kRoundLarge, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
 };
 
 class allocatorMgr {
@@ -93,11 +89,11 @@ private:
     Configs searched_configs;
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
-    const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2, 1048576*5/2, 1048576*3};
-    const std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5, 20971520*6};
-    const std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2, 20971520*3};
-    const std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10, 10485760*12};
-    const std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12, 2097152*14, 2097152*16};
+    const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
+    const std::set<size_t> kSmallBuffer_candidates {20971520, 20971520*2, 20971520*3, 20971520*4, 20971520*5};
+    const std::set<size_t> kLargeBuffer_candidates {20971520/2, 20971520, 20971520*3/2, 20971520*2, 20971520*5/2};
+    const std::set<size_t> kMinLargeAlloc_candidates {10485760*2, 10485760*4, 10485760*6, 10485760*8, 10485760*10};
+    const std::set<size_t> kRoundLarge_candidates {2097152, 2097152*2, 2097152*4, 2097152*8, 2097152*10, 2097152*12};
     const std::set<float> GROUP_DIFFERENCES {0.2, 0.4, 0.6, 0.8, 1.2, 1.4, 1.6, 1.8, 2.0};
 
     std::array<std::set<size_t>, CONFIG_NUMS> ALL_CANDIDATES = {
@@ -117,8 +113,6 @@ private:
 
     void log_configs(Configs& configs, bool get_mem = true);
 
-    void search_configs();
-
     void apply_configs(const Configs& configs);
 
     void report_configs();
@@ -128,6 +122,12 @@ private:
     void update_block_reference();
 
     void free_block();
+
+    Configs evaluate_allocator(Configs configs, Configs prev_conf);
+
+    void search_group();
+
+    void allocator_assert(bool expr);
     
 public:
     allocatorMgr();
@@ -135,6 +135,8 @@ public:
     allocatorMgr(int device, int stream);
 
     void empty_cache();
+
+    size_t get_max_reserved_bytes();
 
     std::pair<size_t, size_t> get_allocator_memory_usage();
 
@@ -157,6 +159,10 @@ public:
     size_t get_grouped_allocation_size(size_t size);
 
     size_t get_allocation_size(size_t size);
+
+    void search_config();
+
+    void search_configs();
 
 };
 

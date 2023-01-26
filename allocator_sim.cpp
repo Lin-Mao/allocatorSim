@@ -350,6 +350,10 @@ std::pair<size_t, size_t> allocatorSim::get_max_memory_usage() {
     return std::make_pair(max_allocated_bytes, max_reserved_bytes);
 }
 
+size_t allocatorSim::get_max_reserved_bytes() {
+    return max_reserved_bytes;
+}
+
 void allocatorSim::set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes) {
     max_allocated_bytes = allocated_bytes;
     max_reserved_bytes = reserved_bytes;

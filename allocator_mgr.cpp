@@ -51,6 +51,67 @@ void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
     }
 }
 
+void allocatorMgr::search_group() {
+    for (float diff : GROUP_DIFFERENCES) {
+        current_difference = diff;
+        group_blocks(current_difference);
+    }
+}
+
+void allocatorMgr::allocator_assert(bool expr) {
+    if (expr) {
+        return;
+    } else {
+        report_configs();
+        assert(expr);
+    }
+}
+
+Configs allocatorMgr::evaluate_allocator(Configs configs, Configs prev_conf) {
+    apply_configs(configs);
+    auto reserved_size = simulate_allocator().second;
+    if (reserved_size < current_reserved_size) {
+        current_reserved_size = std::min(current_reserved_size, reserved_size);
+        return configs;
+    } else {
+        apply_configs(prev_conf);
+    }
+    return prev_conf;
+}
+
+void allocatorMgr::search_config() {
+    log_configs(original_configs);
+    auto prev_conf = original_configs;
+    for (auto kMinBlockSize : kMinBlockSize_candidates) {
+        for (auto kSmallSize : kSmallSize_candidates) {
+            for (auto kSmallBuffer : kSmallBuffer_candidates) {
+                for (auto kLargeBuffer : kLargeBuffer_candidates) {
+                    for (auto kMinLargeAlloc : kMinLargeAlloc_candidates) {
+                        for (auto kRoundLarge : kRoundLarge_candidates) {
+                            searched_configs = Configs(
+                                kMinBlockSize,
+                                kSmallSize,
+                                kSmallBuffer,
+                                kLargeBuffer,
+                                kMinLargeAlloc,
+                                kRoundLarge, 0, 0);
+                            // search_group();
+                            prev_conf = evaluate_allocator(searched_configs, prev_conf);
+                            reset_allocator_memory_usage();
+                            empty_cache();
+                        }
+
+                    }
+
+                }
+            }
+        }
+    }
+    apply_configs(original_configs);
+    log_configs(searched_configs);
+    report_configs();
+}
+
 void allocatorMgr::search_configs() {
     log_configs(original_configs);
     for (size_t i = 0; i < CONFIG_NUMS; i++) {
@@ -74,15 +135,10 @@ void allocatorMgr::search_configs() {
                     ALL_CANDIDATES[j]);
             }
         }
-
-        for (float diff : GROUP_DIFFERENCES) {
-            current_difference = diff;
-            group_blocks(current_difference);
-        }
     }
     apply_configs(searched_configs);
     log_configs(searched_configs);
-    // report_configs();
+    report_configs();
 }
 
 void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
@@ -97,7 +153,6 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
         allocatorConf::get_kLargeBuffer(),
         allocatorConf::get_kMinLargeAlloc(),
         allocatorConf::get_kRoundLarge(),
-        current_difference,
         memory_usage.first,
         memory_usage.second
     );
@@ -152,8 +207,8 @@ std::pair<size_t, size_t> allocatorMgr::simulate_allocator() {
         update_block_reference();
         free_block();
     }
-    auto memory_usage = get_allocator_memory_usage();
-    assert(memory_usage.first <= memory_usage.second);
+    std::pair<size_t, size_t> memory_usage = get_allocator_memory_usage();
+    allocator_assert(memory_usage.first <= memory_usage.second);
     return memory_usage;
 }
 
@@ -251,12 +306,16 @@ std::pair<size_t, size_t> allocatorMgr::get_allocator_memory_usage() {
     return alloc_sim.get_max_memory_usage();
 }
 
+size_t allocatorMgr::get_max_reserved_bytes() {
+    return alloc_sim.get_max_reserved_bytes();
+}
+
 void allocatorMgr::reset_allocator_memory_usage() {
     alloc_sim.set_max_memory_usage(0, 0);
 }
 
 void allocatorMgr::show_allocator_memory_usage() {
-    auto memory_usage = get_allocator_memory_usage();
+    std::pair<size_t, size_t> memory_usage = get_allocator_memory_usage();
     std::cout << "Max allocated size: " << memory_usage.first << " B ("
               << format_size(memory_usage.first) << ")" << std::endl;
     std::cout << "Max reserved size: " << memory_usage.second << " B ("

@@ -73,6 +73,8 @@ public:
 
     std::pair<size_t, size_t> get_max_memory_usage();
 
+    size_t get_max_reserved_bytes();
+
     void set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes);
 
     void set_group_enable_flag_sim(bool flag);
