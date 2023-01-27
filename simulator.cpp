@@ -86,7 +86,7 @@ void run_allocator(const trace_t& malloc_map, const trace_t& free_map, uint64_t 
     auto memory_usage = alloc_mgr.simulate_allocator();
     std::cout << "Max reserved size: " << memory_usage << std::endl << std::endl;
     alloc_mgr.simulate_allocator();
-    alloc_mgr.search_config();
+    alloc_mgr.search_config_with_group();
 }
 
 int main() {

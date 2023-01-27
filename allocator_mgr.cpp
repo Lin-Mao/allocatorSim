@@ -60,9 +60,30 @@ bool allocatorMgr::check_configs(Configs& config) {
 }
 
 void allocatorMgr::search_group() {
-    for (float diff : GROUP_DIFFERENCES) {
-        current_difference = diff;
-        group_blocks(current_difference);
+    log_configs(original_configs);
+    reset_allocator_memory_usage();
+    empty_cache();
+    for (auto diff : GROUP_DIFFERENCES) {
+        group_blocks(diff);
+        if (evaluate_allocator(original_configs, original_configs)) {
+            current_difference = diff;
+            allocatorConf::BACKUP_GROUPS = allocatorConf::_GROUPS;
+            alloc_sim.set_group_enable_flag_sim(true);
+            group_enable_flag = true;
+        } else if(group_enable_flag) {
+            // rollback
+            allocatorConf::_GROUPS = allocatorConf::BACKUP_GROUPS;
+        }
+        reset_allocator_memory_usage();
+        empty_cache();
+    }
+    evaluate_allocator(original_configs, original_configs);
+    log_configs(searched_configs);
+    report_configs(original_configs, searched_configs);
+    if (group_enable_flag) {
+        std::cout << "Group difference: " << current_difference << std::endl;
+    } else {
+        std::cout << "No group" << std::endl;
     }
 }
 
@@ -90,6 +111,8 @@ bool allocatorMgr::evaluate_allocator(Configs configs, Configs prev_conf) {
 
 void allocatorMgr::search_config() {
     log_configs(original_configs);
+    reset_allocator_memory_usage();
+    empty_cache();
     auto prev_conf = original_configs;
     for (auto kMinBlockSize : kMinBlockSize_candidates) {
         for (auto kSmallSize : kSmallSize_candidates) {
@@ -126,15 +149,14 @@ void allocatorMgr::search_config() {
     log_configs(searched_configs);
     report_configs(original_configs, searched_configs);
 
-    // for search_config_with_group
-    reset_allocator_memory_usage();
-    empty_cache();
-    search_config_with_group();
+    // search_config_with_group();
 }
 
 // after search group
 void allocatorMgr::search_config_with_group() {
-    auto conf_backup = searched_configs;
+    log_configs(original_configs);
+    reset_allocator_memory_usage();
+    empty_cache();
     auto prev_conf = searched_configs;
     for (auto kMinBlockSize : kMinBlockSize_candidates) {
         for (auto kSmallSize : kSmallSize_candidates) {
@@ -178,7 +200,7 @@ void allocatorMgr::search_config_with_group() {
     apply_configs(prev_conf);
     evaluate_allocator(prev_conf, prev_conf);
     log_configs(searched_configs);
-    report_configs(conf_backup, searched_configs);
+    report_configs(original_configs, searched_configs);
 }
 
 void allocatorMgr::search_configs() {
@@ -258,7 +280,9 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     } else {
         if (initial_opt) {
             current_reserved_size = simulate_allocator();
-            search_config();
+            // search_config();
+            // search_group();
+            search_config_with_group();
             result = true;
             initial_opt = false;
             _active_blocks.clear();

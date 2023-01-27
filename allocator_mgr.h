@@ -128,10 +128,6 @@ private:
     // true means new config works
     bool evaluate_allocator(Configs configs, Configs prev_conf);
 
-    void search_group();
-
-    void search_config_with_group();
-
     void allocator_assert(bool expr);
     
 public:
@@ -169,7 +165,11 @@ public:
 
     void search_config();
 
+    void search_group();
+
     void search_configs();
+
+    void search_config_with_group();
 
 };
 
