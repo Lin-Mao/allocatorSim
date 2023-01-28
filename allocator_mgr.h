@@ -106,8 +106,6 @@ private:
     float current_difference = 0.0;
 
 private:
-    template<typename FUNC1, typename FUNC2, typename candidate_t>
-    void search_candidates(FUNC1 get_func, FUNC2 set_func, std::set<candidate_t> candidates);
 
     bool check_constraints();
 
@@ -166,8 +164,6 @@ public:
     void search_config();
 
     void search_group();
-
-    void search_configs();
 
     void search_config_with_group();
 

@@ -26,31 +26,6 @@ bool allocatorMgr::check_constraints() {
     return true;
 }
 
-template<typename FUNC1, typename FUNC2, typename candidate_t>
-void allocatorMgr::search_candidates(FUNC1 get_func, FUNC2 set_func,
-                                    std::set<candidate_t> candidates) {
-    for (auto candidate : candidates) {
-        auto prev = get_func();
-        set_func(candidate);
-
-        if (!check_constraints()) {
-            set_func(prev);
-            continue;
-        }
-        
-        auto reserved_size = simulate_allocator();
-        if (reserved_size >= current_reserved_size) {
-            set_func(prev);
-        } else {
-            log_configs(searched_configs, false);
-        }
-
-        current_reserved_size = std::min(current_reserved_size, reserved_size);
-        reset_allocator_memory_usage();
-        empty_cache();
-    }
-}
-
 bool allocatorMgr::check_configs(Configs& config) {
     if (config.kMinLargeAlloc >= config.kLargeBuffer) {
         return false;
@@ -199,35 +174,6 @@ void allocatorMgr::search_config_with_group() {
     }
     apply_configs(prev_conf);
     evaluate_allocator(prev_conf, prev_conf);
-    log_configs(searched_configs);
-    report_configs(original_configs, searched_configs);
-}
-
-void allocatorMgr::search_configs() {
-    log_configs(original_configs);
-    for (size_t i = 0; i < CONFIG_NUMS; i++) {
-        auto candidates = ALL_CANDIDATES[i];
-        auto set_func = allocatorConf::set_funcs[i];
-        auto get_func = allocatorConf::get_funcs[i];
-        for (auto candidate : candidates) {
-            auto prev = get_func();
-            set_func(candidate);
-
-            if (!check_constraints()) {
-                set_func(prev);
-                continue;
-            }
-
-            for(size_t j = 0; j < CONFIG_NUMS; j++) {
-                if (j == i) continue;
-                search_candidates(
-                    allocatorConf::get_funcs[j],
-                    allocatorConf::set_funcs[j],
-                    ALL_CANDIDATES[j]);
-            }
-        }
-    }
-    apply_configs(searched_configs);
     log_configs(searched_configs);
     report_configs(original_configs, searched_configs);
 }
