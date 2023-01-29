@@ -38,22 +38,29 @@ void allocatorMgr::search_group() {
     log_configs(original_configs);
     reset_allocator_memory_usage();
     empty_cache();
+    // get the result without grouping
+    evaluate_allocator(original_configs, original_configs);
+
     for (auto diff : GROUP_DIFFERENCES) {
         group_blocks(diff);
         if (evaluate_allocator(original_configs, original_configs)) {
             current_difference = diff;
             allocatorConf::BACKUP_GROUPS = allocatorConf::_GROUPS;
-            alloc_sim.set_group_enable_flag_sim(true);
+            // alloc_sim.set_group_enable_flag_sim(true);
             group_enable_flag = true;
         } else if(group_enable_flag) {
             // rollback
             allocatorConf::_GROUPS = allocatorConf::BACKUP_GROUPS;
+        } else if (!group_enable_flag) {
+            // disable group in sim
+            alloc_sim.set_group_enable_flag_sim(false);
         }
         reset_allocator_memory_usage();
         empty_cache();
     }
     evaluate_allocator(original_configs, original_configs);
     log_configs(searched_configs);
+    std::cout << "[allocatorMgr::search_group()]" << std::endl;
     report_configs(original_configs, searched_configs);
     if (group_enable_flag) {
         std::cout << "Group difference: " << current_difference << std::endl;
@@ -66,6 +73,7 @@ void allocatorMgr::allocator_assert(bool expr) {
     if (expr) {
         return;
     } else {
+        std::cout << "[allocatorMgr::allocator_assert(bool expr)]" << std::endl;
         report_configs(original_configs, searched_configs);
         assert(expr);
     }
@@ -122,6 +130,7 @@ void allocatorMgr::search_config() {
     apply_configs(prev_conf);
     evaluate_allocator(prev_conf, prev_conf);
     log_configs(searched_configs);
+    std::cout << "[allocatorMgr::search_config()]" << std::endl;
     report_configs(original_configs, searched_configs);
 
     // search_config_with_group();
@@ -132,6 +141,7 @@ void allocatorMgr::search_config_with_group() {
     log_configs(original_configs);
     reset_allocator_memory_usage();
     empty_cache();
+    searched_configs = original_configs;
     auto prev_conf = searched_configs;
     for (auto kMinBlockSize : kMinBlockSize_candidates) {
         for (auto kSmallSize : kSmallSize_candidates) {
@@ -149,17 +159,26 @@ void allocatorMgr::search_config_with_group() {
                             if(!check_configs(searched_configs)) {
                                 continue;
                             }
+                            // get the result without grouping
+                            if (evaluate_allocator(searched_configs, prev_conf)) {
+                                prev_conf = searched_configs;
+                            }
+                            reset_allocator_memory_usage();
+                            empty_cache();
+
                             for (auto diff : GROUP_DIFFERENCES) {
                                 group_blocks(diff);
                                 if (evaluate_allocator(searched_configs, prev_conf)) {
                                     prev_conf = searched_configs;
                                     current_difference = diff;
                                     allocatorConf::BACKUP_GROUPS = allocatorConf::_GROUPS;
-                                    alloc_sim.set_group_enable_flag_sim(true);
+                                    // alloc_sim.set_group_enable_flag_sim(true);
                                     group_enable_flag = true;
                                 } else if(group_enable_flag) {
                                     // rollback
                                     allocatorConf::_GROUPS = allocatorConf::BACKUP_GROUPS;
+                                } else if (!group_enable_flag) {
+                                    alloc_sim.set_group_enable_flag_sim(false);
                                 }
                                 reset_allocator_memory_usage();
                                 empty_cache();
@@ -175,6 +194,7 @@ void allocatorMgr::search_config_with_group() {
     apply_configs(prev_conf);
     evaluate_allocator(prev_conf, prev_conf);
     log_configs(searched_configs);
+    std::cout << "[allocatorMgr::search_config_with_group()]" << std::endl;
     report_configs(original_configs, searched_configs);
 }
 
@@ -252,6 +272,7 @@ size_t allocatorMgr::simulate_allocator() {
     auto reserved_size = get_reserved_bytes();
     auto allocated_size = get_allocated_bytes();
 
+    log_configs(searched_configs);
     allocator_assert(reserved_size > allocated_size);
     return reserved_size;
 }
@@ -299,6 +320,13 @@ void allocatorMgr::report_configs(const Configs& conf_before, const Configs& con
     std::cout << std::setw(width) << std::left << "m_memory_segment_address_interval: "
               << conf_before.m_memory_segment_address_interval << " => "
               << conf_after.m_memory_segment_address_interval << std::endl;
+    if (group_enable_flag) {
+        std::cout << "Group difference: " << current_difference << std::endl;
+        for (auto g : allocatorConf::_GROUPS) {
+            std::cout << g << " ";
+        }
+        std::cout << std::endl;
+    }
     std::cout << "############################################################" << std::endl;
 }
 
@@ -378,6 +406,10 @@ void allocatorMgr::group_blocks(const float& difference) {
         }
     }
 
+    if (block_sizes.empty()) {
+        return;
+    }
+
     for (int i = 0; i < GROUP_NUMS; i++) {
         allocatorConf::_GROUPS[i] = std::numeric_limits<size_t>::max();
     }
@@ -398,9 +430,10 @@ void allocatorMgr::group_blocks(const float& difference) {
         }
         it++;
     }
-    if (!block_sizes.empty() && group_boundary != *block_sizes.rbegin()) {
+    if (group_boundary != *block_sizes.rbegin()) {
         allocatorConf::_GROUPS[index] = *block_sizes.rbegin();
     }
+    alloc_sim.set_group_enable_flag_sim(true);
 }
 
 size_t allocatorMgr::get_grouped_allocation_size(size_t size) {
