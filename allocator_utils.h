@@ -12,6 +12,7 @@
 #include <array>
 #include <memory>
 #include <sstream>
+#include <chrono>
 
 namespace c10 {
 namespace cuda {
@@ -252,6 +253,22 @@ struct MemoryRange {
     bool operator<(const MemoryRange &other) const {
         return this->start < other.start;
     }
+};
+
+#define TIMER_NUMS 10
+using sys_clock = std::chrono::time_point<std::chrono::system_clock>;
+
+class allocatorTimer {
+private:
+    static std::array<size_t, TIMER_NUMS> timers;
+    static std::array<sys_clock, TIMER_NUMS> starts;
+    static std::array<sys_clock, TIMER_NUMS> ends;
+
+public:
+    static void start_timer(int index);
+    static void end_timer(int index);
+    static void log_timer(int index);
+    static size_t get_time(int index);
 };
 
 std::string format_size(size_t size);
