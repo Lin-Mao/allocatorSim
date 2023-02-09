@@ -4,7 +4,10 @@ namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
-std::array<size_t, TIMER_NUMS> allocatorTimer::timers = {0, 0, 0, 0, 0};
+std::array<size_t, TIMER_NUMS> allocatorTimer::timers
+                                    = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+std::array<std::string, TIMER_NUMS> allocatorTimer::timer_names
+                                    = {"", "", "", "", "", "", "", "", "", ""};
 std::array<sys_clock, TIMER_NUMS> allocatorTimer::starts = {};
 std::array<sys_clock, TIMER_NUMS> allocatorTimer::ends = {};
 
@@ -16,13 +19,16 @@ void allocatorTimer::end_timer(int index) {
     ends[index] = std::chrono::system_clock::now();
 }
 
-void allocatorTimer::log_timer(int index) {
+void allocatorTimer::log_timer(int index, std::string name) {
+    if (name != "") {
+        timer_names[index] = name;
+    }
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(ends[index] - starts[index]);
     timers[index] += double(duration.count()) * std::chrono::microseconds::period::num;
 }
 
-size_t allocatorTimer::get_time(int index) {
-    return timers[index];
+void allocatorTimer::print_timer(int index) {
+    std::cout << timer_names[index] << ": " << timers[index] << " us" << std::endl;
 }
 
 std::string format_size(size_t size) {

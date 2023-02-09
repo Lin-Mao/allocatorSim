@@ -261,14 +261,15 @@ using sys_clock = std::chrono::time_point<std::chrono::system_clock>;
 class allocatorTimer {
 private:
     static std::array<size_t, TIMER_NUMS> timers;
+    static std::array<std::string, TIMER_NUMS> timer_names;
     static std::array<sys_clock, TIMER_NUMS> starts;
     static std::array<sys_clock, TIMER_NUMS> ends;
 
 public:
     static void start_timer(int index);
     static void end_timer(int index);
-    static void log_timer(int index);
-    static size_t get_time(int index);
+    static void log_timer(int index, std::string name = "");
+    static void print_timer(int index);
 };
 
 std::string format_size(size_t size);
