@@ -20,7 +20,7 @@ void allocatorTimer::end_timer(int index) {
 }
 
 void allocatorTimer::log_timer(int index, std::string name) {
-    if (name != "") {
+    if (timer_names[index] != "") {
         timer_names[index] = name;
     }
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(ends[index] - starts[index]);
