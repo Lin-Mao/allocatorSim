@@ -267,7 +267,7 @@ private:
 
 public:
     static void start_timer(int index);
-    static void end_timer(int index);
+    static void stop_timer(int index);
     static void log_timer(int index, std::string name);
     static void print_timer(int index);
 };

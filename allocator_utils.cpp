@@ -1,4 +1,5 @@
 #include "allocator_utils.h"
+#include <iostream>
 
 namespace c10 {
 namespace cuda {
@@ -15,12 +16,12 @@ void allocatorTimer::start_timer(int index) {
     starts[index] = std::chrono::system_clock::now();
 }
 
-void allocatorTimer::end_timer(int index) {
+void allocatorTimer::stop_timer(int index) {
     ends[index] = std::chrono::system_clock::now();
 }
 
 void allocatorTimer::log_timer(int index, std::string name) {
-    if (timer_names[index] != "") {
+    if (timer_names[index] == "") {
         timer_names[index] = name;
     }
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(ends[index] - starts[index]);
@@ -28,7 +29,7 @@ void allocatorTimer::log_timer(int index, std::string name) {
 }
 
 void allocatorTimer::print_timer(int index) {
-    std::cout << timer_names[index] << ": " << timers[index] << " us" << std::endl;
+    std::cout << std::string(timer_names[index]) << ": " << timers[index] << " us" << std::endl;
 }
 
 std::string format_size(size_t size) {
