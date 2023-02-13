@@ -16,6 +16,13 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     allocatorSim alloc_sim();
 }
 
+void allocatorMgr::test_simulator() {
+    process_trace();
+    auto memory_usage = simulate_allocator();
+    std::cout << "Max reserved size: " << memory_usage << std::endl << std::endl;
+    search_config_with_group();
+}
+
 bool allocatorMgr::check_constraints() {
     if (allocatorConf::get_kMinLargeAlloc() >= allocatorConf::get_kLargeBuffer()) {
         return false;

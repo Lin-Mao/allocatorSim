@@ -125,11 +125,25 @@ private:
     bool evaluate_allocator(Configs configs, Configs prev_conf);
 
     void allocator_assert(bool expr);
+
+    void process_trace();
+
+    size_t simulate_allocator();
+
+    void search_config();
+
+    void search_group();
+
+    void search_config_with_group();
+
+    void group_blocks(const float& difference);
     
 public:
     allocatorMgr();
 
     allocatorMgr(int device, int stream);
+
+    void test_simulator();
 
     void empty_cache();
 
@@ -143,10 +157,6 @@ public:
 
     void show_allocator_memory_usage();
 
-    void process_trace();
-
-    size_t simulate_allocator();
-
     void collect_trace(void* ptr, int64_t size);
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
@@ -155,17 +165,9 @@ public:
 
     void free_cpu_memory_chunk(char* pointer);
 
-    void group_blocks(const float& difference);
-
     size_t get_grouped_allocation_size(size_t size);
 
     size_t get_allocation_size(size_t size);
-
-    void search_config();
-
-    void search_group();
-
-    void search_config_with_group();
 
 };
 
