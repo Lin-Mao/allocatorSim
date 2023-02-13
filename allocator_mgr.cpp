@@ -7,14 +7,12 @@ namespace cuda {
 namespace AllocatorSim {
 
 allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
-    this->block_ref_map = std::map<Block*, size_t>();
     allocatorSim alloc_sim();
 }
 
 allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
-    this->block_ref_map = std::map<Block*, size_t>();
     allocatorSim alloc_sim();
 }
 
@@ -245,6 +243,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
         // do something
     } else {
         if (initial_opt) {
+            process_trace();
             current_reserved_size = simulate_allocator();
             // search_config();
             // search_group();
@@ -258,16 +257,24 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     return result;
 }
 
-size_t allocatorMgr::simulate_allocator() {
-    for (uint64_t i = 0; i <= op_id; i++) {
-        auto block = _trace.find(i);
-        if (block != _trace.end()) {
-            auto reference = std::get<0>(block->second) - block->first;
-            malloc_block(std::get<1>(block->second), reference);
-        }
-        update_block_reference();
-        free_block();
+void allocatorMgr::process_trace() {
+    for (auto t : _trace) {
+        op_id_map.emplace(t.first, true);
+        op_id_map.emplace(t.second.first, false);
     }
+}
+
+size_t allocatorMgr::simulate_allocator() {
+    for (auto op : op_id_map) {
+        if (op.second) {
+            auto orig_size = _trace[op.first].second;
+            auto block = this->alloc_sim.malloc(this->device, orig_size, this->stream);
+            free_blocks.emplace(_trace[op.first].first, block);
+        } else {
+            this->alloc_sim.free(free_blocks[op.first]);
+        }
+    }
+    free_blocks.clear();
 
     auto reserved_size = get_reserved_bytes();
     auto allocated_size = get_allocated_bytes();
@@ -343,31 +350,6 @@ void allocatorMgr::apply_configs(const Configs& configs) {
     // allocatorConf::set_garbage_collection_threshold(configs.m_garbage_collection_threshold);
     // allocatorConf::set_memory_segment_address_start(configs.m_memory_segment_address_start);
     // allocatorConf::set_memory_segment_address_interval(configs.m_memory_segment_address_interval);
-}
-
-void allocatorMgr::malloc_block(size_t orig_size, size_t ref) {
-    Block* b = this->alloc_sim.malloc(this->device, orig_size, this->stream);
-    this->block_ref_map.emplace(b, ref);
-}
-
-void allocatorMgr::update_block_reference() {
-    for (auto& b : this->block_ref_map) {
-        --b.second;
-    }
-}
-
-void allocatorMgr::free_block() {
-    std::vector<Block*> del_blocks;
-    for (const auto b : this->block_ref_map) {
-        if (b.second == 0) {
-            this->alloc_sim.free(b.first);
-            del_blocks.push_back(b.first);
-        }
-    }
-
-    for (const auto b : del_blocks) {
-        this->block_ref_map.erase(b);
-    }
 }
 
 void allocatorMgr::empty_cache() {

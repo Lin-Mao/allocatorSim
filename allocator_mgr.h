@@ -3,6 +3,7 @@
 
 #include "allocator_utils.h"
 #include "allocator_sim.h"
+#include <unordered_map>
 
 namespace c10 {
 namespace cuda {
@@ -78,7 +79,6 @@ private:
     int device;
     int stream;
     allocatorSim alloc_sim;
-    std::map<Block*, size_t> block_ref_map;
     
     uint64_t op_id = 0;
     bool initial_opt = true;
@@ -87,6 +87,10 @@ private:
     blockMap_t _trace;
     Configs original_configs;
     Configs searched_configs;
+
+    // <op_id, malloc/free>
+    std::map<uint64_t, bool> op_id_map;
+    std::unordered_map<uint64_t, Block*> free_blocks;
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
@@ -117,12 +121,6 @@ private:
 
     void report_configs(const Configs& conf1, const Configs& conf2);
 
-    void malloc_block(size_t orig_size, size_t ref);
-
-    void update_block_reference();
-
-    void free_block();
-
     // true means new config works
     bool evaluate_allocator(Configs configs, Configs prev_conf);
 
@@ -144,6 +142,8 @@ public:
     void reset_allocator_memory_usage();
 
     void show_allocator_memory_usage();
+
+    void process_trace();
 
     size_t simulate_allocator();
 
