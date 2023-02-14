@@ -1,8 +1,8 @@
 PROJECT := allocatorSim
 
 OBJ_DIR := obj/
-SRC_DIR := ./
-INC_DIR := ./
+SRC_DIR := src/
+INC_DIR := include/
 CUR_DIR := $(shell pwd)
 
 CXX ?=
