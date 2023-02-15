@@ -1,4 +1,7 @@
 PROJECT := allocatorSim
+CONFIGS := Makefile.config
+
+include $(CONFIGS)
 
 OBJ_DIR := obj/
 SRC_DIR := src/
@@ -7,8 +10,9 @@ CUR_DIR := $(shell pwd)
 
 CXX ?=
 
-CFLAGS := -std=c++17 -Wall
-LDFLAGS ?=
+CFLAGS := -std=c++17 -Wall -I$(PYTHON_INCLUDE_DIR) -I$(PYBIND11_DIR)/include
+LDFLAGS ?= -L$(PYTHON_LIB_DIR)
+LIBRARY ?= -lpython$(PYTHON_VERSION)
 
 ifdef DEBUG
 CFLAGS += -g -O0
@@ -29,7 +33,7 @@ $(OBJ_DIR):
 	mkdir -p $@
 
 $(PROJECT): $(OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBRARY)
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 	$(CXX) $(CFLAGS) -I$(INC_DIR) -o $@ -c $<
