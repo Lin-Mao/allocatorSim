@@ -1,10 +1,14 @@
 #include "allocator_mgr.h"
 #include <cassert>
 #include <iomanip>
+#include "python_states.h"
 
 namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
+
+const static size_t MAX_NUM_STATES = 30;
+thread_local static python_state_t python_states[MAX_NUM_STATES];
 
 allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
     allocatorSim alloc_sim();
@@ -14,6 +18,18 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
     allocatorSim alloc_sim();
+}
+
+allocatorMgr::~allocatorMgr() {
+    for (auto states : _python_states) {
+        std::cout << "====================================" << std::endl;
+        for (auto state : states) {
+            std::cout << "File name: " << state.file_name << std::endl;
+            std::cout << "Function name: " << state.function_name << std::endl;
+            std::cout << "Function first line number: " << state.function_first_lineno << std::endl;
+            std::cout << "Line number: " << state.lineno << std::endl;
+        }
+    }
 }
 
 void allocatorMgr::test_simulator() {
@@ -482,6 +498,20 @@ size_t allocatorMgr::get_allocation_size(size_t size) {
     }
 }
 
+void allocatorMgr::get_python_states() {
+    size_t num_states = 0;
+    python_state_get(MAX_NUM_STATES, python_states, &num_states);
+    std::vector<PythonStateInfo> states;
+    for (size_t i = 0; i < num_states; i++) {
+        states.push_back(
+            PythonStateInfo(python_states[i].file_name,
+                        python_states[i].function_name,
+                        python_states[i].function_first_lineno,
+                        python_states[i].lineno)
+        );
+    }
+    _python_states.push_back(states);
+}
 
 }  // namespace c10
 }  // namespace cuda
