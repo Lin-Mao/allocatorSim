@@ -6,7 +6,7 @@
 #include <array>
 #include <cassert>
 
-#include "allocator_sim.h"
+#include "allocator_simulator.h"
 
 namespace c10 {
 namespace cuda {

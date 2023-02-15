@@ -1,4 +1,4 @@
-#include "allocator_conf.h"
+#include "allocator_config.h"
 
 namespace c10 {
 namespace cuda {

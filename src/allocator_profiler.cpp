@@ -1,4 +1,4 @@
-#include "allocator_prof.h"
+#include "allocator_profiler.h"
 
 namespace c10 {
 namespace cuda {

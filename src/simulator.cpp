@@ -4,8 +4,8 @@
 #include <string>
 #include <tuple>
 
-#include "allocator_sim.h"
-#include "allocator_mgr.h"
+#include "allocator_simulator.h"
+#include "allocator_manager.h"
 
 using trace_type_t = c10::cuda::AllocatorSim::blockMap_t;
 using trace_t = std::map<uint64_t, std::pair<uint64_t, size_t>>;

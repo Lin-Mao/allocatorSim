@@ -8,8 +8,8 @@
 #include <iostream>
 
 #include "allocator_utils.h"
-#include "allocator_conf.h"
-#include "allocator_prof.h"
+#include "allocator_config.h"
+#include "allocator_profiler.h"
 
 namespace c10 {
 namespace cuda {

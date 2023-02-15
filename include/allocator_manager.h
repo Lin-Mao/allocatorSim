@@ -1,8 +1,7 @@
 #ifndef ALLOCATOR_MGR_H
 #define ALLOCATOR_MGR_H
 
-#include "allocator_utils.h"
-#include "allocator_sim.h"
+#include "allocator_simulator.h"
 #include <unordered_map>
 
 namespace c10 {
