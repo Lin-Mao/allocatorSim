@@ -12,6 +12,7 @@ set(C10_CUDA_SIMULATOR_SRCS
 if(NOT TORCH_INSTALL_LIB_DIR)
     set(TORCH_INSTALL_LIB_DIR lib)
 endif()
+message(STATUS "TORCH_INSTALL_LIB_DIR: ${TORCH_INSTALL_LIB_DIR}")
 
 find_package(Python COMPONENTS Interpreter Development)
 if (NOT ${Python_FOUND})
@@ -31,4 +32,4 @@ target_include_directories(allocatorsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inclu
                             ${Python_INCLUDE_DIRS}
                             ${PYBIND11_DIR}/include)
 
-install(TARGETS allocatorsim DESTINATION "${TORCH_INSTALL_LIB_DIR}")
+install(TARGETS allocatorsim DESTINATION ${TORCH_INSTALL_LIB_DIR})

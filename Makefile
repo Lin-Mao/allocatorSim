@@ -54,4 +54,4 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
 
 .PHONY: clean
 clean:
-	-rm -rf $(OBJ_DIR) $(EXE_DIR) $(APP) $(LIB_DIR) $(LIB)
+	-rm -rf $(OBJ_DIR) $(EXE_DIR) $(APP) $(LIB_DIR) $(LIB) build
