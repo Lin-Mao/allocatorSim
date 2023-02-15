@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(C10_CUDA_SIMULATOR_SRCS
-    src/allocator_conf.cpp
-    src/allocator_sim.cpp
-    src/allocator_mgr.cpp
-    src/allocator_prof.cpp
+    src/allocator_config.cpp
+    src/allocator_simulator.cpp
+    src/allocator_manager.cpp
+    src/allocator_profiler.cpp
     src/allocator_utils.cpp
     src/python_states.cpp
 )
