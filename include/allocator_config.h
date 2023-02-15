@@ -1,8 +1,8 @@
 /**
  * Configurations of allocator.
 */
-#ifndef ALLOCATOR_CFG_H
-#define ALLOCATOR_CFG_H
+#ifndef ALLOCATOR_CONFIG_H
+#define ALLOCATOR_CONFIG_H
 
 #include <cstddef>
 #include <limits>
@@ -98,4 +98,4 @@ public:
 }  // namespace cuda
 }  // namespace AllocatorSim
 
-#endif // ALLOCATOR_CFG_H
+#endif // ALLOCATOR_CONFIG_H

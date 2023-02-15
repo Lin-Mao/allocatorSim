@@ -2,8 +2,8 @@
  * @brief PyTorch CUDA caching allocator simulator
  * @date 12/19/2022
 */
-#ifndef ALLOCATOR_SIM_H
-#define ALLOCATOR_SIM_H
+#ifndef ALLOCATOR_SIMULATOR_H
+#define ALLOCATOR_SIMULATOR_H
 
 #include <iostream>
 
@@ -87,4 +87,4 @@ public:
 }  // namespace cuda
 }  // namespace AllocatorSim
 
-#endif  // ALLOCATOR_SIM_H
+#endif  // ALLOCATOR_SIMULATOR_H

@@ -1,5 +1,5 @@
-#ifndef ALLOCATOR_MGR_H
-#define ALLOCATOR_MGR_H
+#ifndef ALLOCATOR_MANAGER_H
+#define ALLOCATOR_MANAGER_H
 
 #include "allocator_simulator.h"
 #include <unordered_map>
@@ -196,4 +196,4 @@ public:
 }  // namespace cuda
 }  // namespace AllocatorSim
 
-#endif  // ALLOCATOR_MGR_H
+#endif  // ALLOCATOR_MANAGER_H

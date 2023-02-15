@@ -1,8 +1,8 @@
 /**
  * The states of allocator.
 */
-#ifndef ALLOCATOR_PROF_H
-#define ALLOCATOR_PROF_H
+#ifndef ALLOCATOR_PROFILER_H
+#define ALLOCATOR_PROFILER_H
 
 #include "allocator_utils.h"
 
@@ -88,4 +88,4 @@ public:
 }  // namespace cuda
 }  // namespace AllocatorSim
 
-#endif  // ALLOCATOR_PROF_H
+#endif  // ALLOCATOR_PROFILER_H
