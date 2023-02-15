@@ -1,4 +1,4 @@
-PROJECT := allocatorSim
+PROJECT := allocatorsim
 CONFIGS := Makefile.config
 
 include $(CONFIGS)
@@ -6,6 +6,10 @@ include $(CONFIGS)
 OBJ_DIR := obj/
 SRC_DIR := src/
 INC_DIR := include/
+LIB_DIR := lib/
+EXE_DIR := bin/
+APP := $(EXE_DIR)$(PROJECT)
+LIB := $(LIB_DIR)lib$(PROJECT).so
 CUR_DIR := $(shell pwd)
 
 CXX ?=
@@ -24,20 +28,30 @@ SRCS := $(notdir $(wildcard $(SRC_DIR)*.cpp))
 OBJS := $(addprefix $(OBJ_DIR), $(patsubst %.cpp, %.o, $(SRCS)))
 
 .PHONY: all
-all: dirs exes
+all: dirs app lib
 
-dirs: $(OBJ_DIR)
-exes: $(PROJECT)
+dirs: $(OBJ_DIR) $(EXE_DIR) $(LIB_DIR)
+app: $(APP)
+lib: $(LIB)
+
+$(EXE_DIR):
+	mkdir -p $@
+
+$(LIB_DIR):
+	mkdir -p $@
 
 $(OBJ_DIR):
 	mkdir -p $@
 
-$(PROJECT): $(OBJS)
+$(APP): $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBRARY)
 
+$(LIB): $(OBJS)
+	$(CXX) $(LDFLAGS) -fPIC -shared -o $@ $^ $(LIBRARY)
+
 $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
-	$(CXX) $(CFLAGS) -I$(INC_DIR) -o $@ -c $<
+	$(CXX) $(CFLAGS) -fPIC -I$(INC_DIR) -o $@ -c $<
 
 .PHONY: clean
 clean:
-	-rm -rf $(OBJ_DIR) $(PROJECT)
+	-rm -rf $(OBJ_DIR) $(EXE_DIR) $(APP) $(LIB_DIR) $(LIB)
