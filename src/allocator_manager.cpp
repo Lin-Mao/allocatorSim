@@ -498,6 +498,10 @@ size_t allocatorMgr::get_allocation_size(size_t size) {
     }
 }
 
+void allocatorMgr::record_callpath() {
+    get_python_states();
+}
+
 void allocatorMgr::get_python_states() {
     size_t num_states = 0;
     python_state_get(MAX_NUM_STATES, python_states, &num_states);

@@ -190,6 +190,8 @@ public:
 
     void get_python_states();
 
+    void record_callpath();
+
 };
 
 }  // namespace c10
