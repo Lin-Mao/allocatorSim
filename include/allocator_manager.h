@@ -73,21 +73,6 @@ struct Configs {
             kMinLargeAlloc, kRoundLarge, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
 };
 
-
-struct PythonStateInfo {
-  std::string file_name;
-  std::string function_name;
-  size_t function_first_lineno;
-  size_t lineno;
-
-  PythonStateInfo(const std::string &file_name, const std::string &function_name,
-              size_t function_first_lineno, size_t lineno)
-      : file_name(file_name),
-        function_name(function_name),
-        function_first_lineno(function_first_lineno),
-        lineno(lineno) {}
-};
-
 class allocatorMgr {
 private:
     int device;
@@ -106,8 +91,7 @@ private:
     std::map<uint64_t, bool> op_id_map;
     std::unordered_map<uint64_t, Block*> free_blocks;
 
-    // for python states
-    std::vector<std::vector<PythonStateInfo>> _python_states;
+    std::vector<std::string> python_hash_vector;
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
@@ -154,6 +138,8 @@ private:
     void search_config_with_group();
 
     void group_blocks(const float& difference);
+
+    std::string get_python_states();
     
 public:
     allocatorMgr();
@@ -176,7 +162,7 @@ public:
 
     void show_allocator_memory_usage();
 
-    void collect_trace(void* ptr, int64_t size);
+    void collect_trace(void* ptr, int64_t size, bool is_malloc = false);
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
 
@@ -187,10 +173,6 @@ public:
     size_t get_grouped_allocation_size(size_t size);
 
     size_t get_allocation_size(size_t size);
-
-    void get_python_states();
-
-    void record_callpath();
 
 };
 

@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iomanip>
 #include "utils/python_states.h"
+#include "utils/hash.h"
 
 namespace c10 {
 namespace cuda {
@@ -21,14 +22,8 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 }
 
 allocatorMgr::~allocatorMgr() {
-    for (auto states : _python_states) {
-        std::cout << "====================================" << std::endl;
-        for (auto state : states) {
-            std::cout << "File name: " << state.file_name << std::endl;
-            std::cout << "Function name: " << state.function_name << std::endl;
-            std::cout << "Function first line number: " << state.function_first_lineno << std::endl;
-            std::cout << "Line number: " << state.lineno << std::endl;
-        }
+    for (auto hash : python_hash_vector) {
+        std::cout << "Hash: " << hash << std::endl;
     }
 }
 
@@ -238,11 +233,15 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
     );
 }
 
-void allocatorMgr::collect_trace(void* ptr, int64_t size) {
-    if (size > 0) {
+void allocatorMgr::collect_trace(void* ptr, int64_t size, bool is_malloc) {
+    if (size > 0) {  // malloc
+        if (is_malloc) {  // original malloc
+            auto hash = sha256(get_python_states());
+            python_hash_vector.push_back(hash);
+        }
         _active_blocks.emplace(ptr, std::make_pair(op_id, size));
         op_id++;
-    } else {
+    } else {  // free
         auto b = _active_blocks.find(ptr);
         _trace.emplace(
             b->second.first, std::make_pair(op_id, b->second.second));
@@ -498,23 +497,19 @@ size_t allocatorMgr::get_allocation_size(size_t size) {
     }
 }
 
-void allocatorMgr::record_callpath() {
-    get_python_states();
-}
-
-void allocatorMgr::get_python_states() {
+std::string allocatorMgr::get_python_states() {
     size_t num_states = 0;
     python_state_get(MAX_NUM_STATES, python_states, &num_states);
-    std::vector<PythonStateInfo> states;
+
+    std::string str = "";
     for (size_t i = 0; i < num_states; i++) {
-        states.push_back(
-            PythonStateInfo(python_states[i].file_name,
-                        python_states[i].function_name,
-                        python_states[i].function_first_lineno,
-                        python_states[i].lineno)
-        );
-    }
-    _python_states.push_back(states);
+        str += std::string(python_states[i].file_name)
+            + std::string(python_states[i].function_name)
+            + std::to_string(python_states[i].lineno)
+            + std::to_string(python_states[i].function_first_lineno);
+}
+    // std::cout << str << std::endl;
+    return str;
 }
 
 }  // namespace c10
