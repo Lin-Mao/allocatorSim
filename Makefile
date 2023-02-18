@@ -16,7 +16,7 @@ CXX ?=
 
 CFLAGS := -std=c++17 -Wall -I$(PYTHON_INCLUDE_DIR) -I$(PYBIND11_DIR)/include
 LDFLAGS ?= -L$(PYTHON_LIB_DIR)
-LIBRARY ?= -lpython$(PYTHON_VERSION)
+LIBRARY ?= -lpython$(PYTHON_VERSION) -lunwind
 
 ifdef DEBUG
 CFLAGS += -g -O0
