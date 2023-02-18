@@ -24,7 +24,7 @@ else
 CFLAGS += -O3
 endif
 
-SRCS := $(notdir $(wildcard $(SRC_DIR)*.cpp))
+SRCS := $(notdir $(wildcard $(SRC_DIR)*.cpp $(SRC_DIR)*/*.cpp))
 OBJS := $(addprefix $(OBJ_DIR), $(patsubst %.cpp, %.o, $(SRCS)))
 
 .PHONY: all
@@ -50,8 +50,11 @@ $(LIB): $(OBJS)
 	$(CXX) $(LDFLAGS) -fPIC -shared -o $@ $^ $(LIBRARY)
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
-	$(CXX) $(CFLAGS) -fPIC -I$(INC_DIR) -o $@ -c $<
+	$(CXX) $(CFLAGS) -fPIC -I$(INC_DIR) -I$(INC_DIR)/utils -o $@ -c $<
+
+$(OBJ_DIR)%.o: $(SRC_DIR)/*/%.cpp
+	$(CXX) $(CFLAGS) -fPIC -I$(INC_DIR) -I$(INC_DIR)/utils -o $@ -c $<
 
 .PHONY: clean
 clean:
-	-rm -rf $(OBJ_DIR) $(EXE_DIR) $(APP) $(LIB_DIR) $(LIB) build
+	-rm -rf $(OBJ_DIR) $(EXE_DIR) $(LIB_DIR) build/

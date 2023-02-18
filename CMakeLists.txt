@@ -6,7 +6,7 @@ set(C10_CUDA_SIMULATOR_SRCS
     src/allocator_manager.cpp
     src/allocator_profiler.cpp
     src/allocator_utils.cpp
-    src/python_states.cpp
+    src/utils/python_states.cpp
 )
 
 if(NOT TORCH_INSTALL_LIB_DIR)
