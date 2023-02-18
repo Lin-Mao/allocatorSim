@@ -3,6 +3,7 @@
 #include <iomanip>
 #include "utils/python_states.h"
 #include "utils/hash.h"
+#include "utils/unwind_utils.h"
 
 namespace c10 {
 namespace cuda {
@@ -22,8 +23,18 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 }
 
 allocatorMgr::~allocatorMgr() {
-    for (auto hash : python_hash_vector) {
-        std::cout << "Hash: " << hash << std::endl;
+    for (auto hash : py_hash_vector) {
+        std::cout << "PY Hash: " << hash << std::endl;
+    }
+
+    std::cout << std::endl;
+    for (auto hash : cpp_hash_vector) {
+        std::cout << "CPP Hash: " << hash << std::endl;
+    }
+
+    std::cout << std::endl;
+    for (auto hash : whole_hash_vector) {
+        std::cout << "Whole Hash: " << hash << std::endl;
     }
 }
 
@@ -236,8 +247,14 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
 void allocatorMgr::collect_trace(void* ptr, int64_t size, bool is_malloc) {
     if (size > 0) {  // malloc
         if (is_malloc) {  // original malloc
-            auto hash = sha256(get_python_states());
-            python_hash_vector.push_back(hash);
+            auto python_states = get_python_states();
+            auto pyhash = sha256(python_states);
+            py_hash_vector.push_back(pyhash);
+            auto cpp_callpath = get_backtrace();
+            auto cpphash = sha256(cpp_callpath);
+            cpp_hash_vector.push_back(cpphash);
+
+            whole_hash_vector.push_back(sha256(python_states + cpp_callpath));
         }
         _active_blocks.emplace(ptr, std::make_pair(op_id, size));
         op_id++;

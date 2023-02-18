@@ -91,7 +91,9 @@ private:
     std::map<uint64_t, bool> op_id_map;
     std::unordered_map<uint64_t, Block*> free_blocks;
 
-    std::vector<std::string> python_hash_vector;
+    std::vector<std::string> py_hash_vector;
+    std::vector<std::string> cpp_hash_vector;
+    std::vector<std::string> whole_hash_vector;
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
