@@ -8,6 +8,7 @@ set(C10_CUDA_SIMULATOR_SRCS
     src/allocator_utils.cpp
     src/utils/python_states.cpp
     src/utils/hash.cpp
+    src/utils/unwind_utils.cpp
 )
 
 if(NOT TORCH_INSTALL_LIB_DIR)
