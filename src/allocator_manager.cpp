@@ -518,15 +518,16 @@ std::string allocatorMgr::get_python_states() {
     size_t num_states = 0;
     python_state_get(MAX_NUM_STATES, python_states, &num_states);
 
-    std::string str = "";
+    std::stringstream ss;
+
     for (size_t i = 0; i < num_states; i++) {
-        str += std::string(python_states[i].file_name)
-            + std::string(python_states[i].function_name)
-            + std::to_string(python_states[i].lineno)
-            + std::to_string(python_states[i].function_first_lineno);
+        ss << std::string(python_states[i].file_name) << ":"
+           << std::to_string(python_states[i].lineno) << std::endl
+           << std::string(python_states[i].function_name) << ":"
+           << std::to_string(python_states[i].function_first_lineno) << std::endl;
 }
-    // std::cout << str << std::endl;
-    return str;
+    // std::cout << ss.str() << std::endl;
+    return ss.str();
 }
 
 }  // namespace c10
