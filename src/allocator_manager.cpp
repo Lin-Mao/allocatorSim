@@ -13,13 +13,11 @@ const static size_t MAX_NUM_STATES = 30;
 thread_local static python_state_t python_states[MAX_NUM_STATES];
 
 allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
-    allocatorSim alloc_sim();
 }
 
 allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
-    allocatorSim alloc_sim();
 }
 
 allocatorMgr::~allocatorMgr() {
