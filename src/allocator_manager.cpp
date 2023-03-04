@@ -4,6 +4,7 @@
 #include "utils/python_states.h"
 #include "utils/hash.h"
 #include "utils/unwind_utils.h"
+#include <fstream>
 
 namespace c10 {
 namespace cuda {
@@ -21,19 +22,6 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 }
 
 allocatorMgr::~allocatorMgr() {
-    for (auto hash : py_hash_vector) {
-        std::cout << "PY Hash: " << hash << std::endl;
-    }
-
-    std::cout << std::endl;
-    for (auto hash : cpp_hash_vector) {
-        std::cout << "CPP Hash: " << hash << std::endl;
-    }
-
-    std::cout << std::endl;
-    for (auto hash : whole_hash_vector) {
-        std::cout << "Whole Hash: " << hash << std::endl;
-    }
 }
 
 void allocatorMgr::test_simulator() {
@@ -242,21 +230,20 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
     );
 }
 
-void allocatorMgr::collect_trace(void* ptr, int64_t size, bool is_malloc) {
+void allocatorMgr::collect_trace(void* ptr, int64_t size, std::string cp_hash) {
     if (size > 0) {  // malloc
-        if (is_malloc) {  // original malloc
-            auto python_states = get_python_states();
-            auto pyhash = sha256(python_states);
-            py_hash_vector.push_back(pyhash);
-            auto cpp_callpath = get_backtrace();
-            auto cpphash = sha256(cpp_callpath);
-            cpp_hash_vector.push_back(cpphash);
-
-            whole_hash_vector.push_back(sha256(python_states + cpp_callpath));
+        if (is_profiling_mode) {  // original malloc
+            total_active_size += size;
+            ptr_to_callpath_hash_map.emplace(ptr, cp_hash);
         }
         _active_blocks.emplace(ptr, std::make_pair(op_id, size));
         op_id++;
     } else {  // free
+        if (is_profiling_mode) {  // original malloc
+            auto ptr_to_cp_hash = ptr_to_callpath_hash_map.find(ptr);
+            total_active_size -= size;
+            ptr_to_callpath_hash_map.erase(ptr_to_cp_hash);
+        }
         auto b = _active_blocks.find(ptr);
         _trace.emplace(
             b->second.first, std::make_pair(op_id, b->second.second));
@@ -279,17 +266,53 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     if (begin) {
         // do something
     } else {
-        if (initial_opt) {
-            process_trace();
-            current_reserved_size = simulate_allocator();
-            // search_config();
-            // search_group();
-            search_config_with_group();
-            result = true;
-            initial_opt = false;
-            _active_blocks.clear();
+        if (is_profiling_mode) {
+            if (initial_opt) {
+                process_trace();
+                current_reserved_size = simulate_allocator();
+                search_config_with_group();
+
+                initial_opt = false;
+                result = false;
+
+                std::ofstream out("optimization_suggestion.txt");
+                out << total_active_size << std::endl;
+                
+                out << searched_configs.kMinBlockSize << std::endl;
+                out << searched_configs.kSmallSize << std::endl;
+                out << searched_configs.kSmallBuffer << std::endl;
+                out << searched_configs.kLargeBuffer << std::endl;
+                out << searched_configs.kMinLargeAlloc << std::endl;
+                out << searched_configs.kRoundLarge << std::endl;
+
+                for (auto pcp : ptr_to_callpath_hash_map) {
+                    unique_hash_trace.emplace(pcp.second);
+                }
+
+                for (auto cp : unique_hash_trace) {
+                    out << cp << std::endl;
+                }
+
+                unique_hash_trace.clear();
+                out.close();
+
+                _active_blocks.clear();
+            }
+            _trace.clear();
         }
-        _trace.clear();
+        else if (is_executing_mode) {
+            if (initial_opt) {
+                process_trace();
+                current_reserved_size = simulate_allocator();
+                // search_config();
+                // search_group();
+                search_config_with_group();
+                result = true;
+                initial_opt = false;
+                _active_blocks.clear();
+            }
+            _trace.clear();
+        }
     }
     return result;
 }
@@ -526,6 +549,63 @@ std::string allocatorMgr::get_python_states() {
 }
     // std::cout << ss.str() << std::endl;
     return ss.str();
+}
+
+void allocatorMgr::enable_profiling(bool enable) {
+    if (enable) {
+        is_profiling_mode = true;
+    } else {
+        is_executing_mode = true;
+        load_optimization_suggestion("opt_suggestion.txt");
+    }
+}
+
+void allocatorMgr::load_at_first_run() {
+    if (is_first_run && is_executing_mode) {
+        load_optimization_suggestion("optimization_suggestion.txt");
+        is_first_run = false;
+    }
+}
+
+std::string allocatorMgr::get_callpath_hash() {
+    if (is_profiling_mode || is_executing_mode) {
+        auto python_states = get_python_states();
+        auto cpp_callpath = get_backtrace();
+        return sha256(python_states + cpp_callpath);
+    }
+    return "";  
+}
+
+void allocatorMgr::load_optimization_suggestion(std::string filename) {
+    std::ifstream in(filename);
+    in >> total_active_size;
+    in >> searched_configs.kMinBlockSize;
+    in >> searched_configs.kSmallSize;
+    in >> searched_configs.kSmallBuffer;
+    in >> searched_configs.kLargeBuffer;
+    in >> searched_configs.kMinLargeAlloc;
+    in >> searched_configs.kRoundLarge;
+
+    std::string line;
+    while (std::getline(in, line)) {
+        unique_hash_trace.emplace(line);
+    }
+    in.close();
+
+    std::cout << total_active_size << std::endl;
+    std::cout << searched_configs.kMinBlockSize << std::endl;
+    std::cout << searched_configs.kSmallSize << std::endl;
+    std::cout << searched_configs.kSmallBuffer << std::endl;
+    std::cout << searched_configs.kLargeBuffer << std::endl;
+    std::cout << searched_configs.kMinLargeAlloc << std::endl;
+    std::cout << searched_configs.kRoundLarge << std::endl;
+    for (auto htrace : unique_hash_trace) {
+        std::cout << htrace << std::endl;
+    }
+}
+
+void* allocatorMgr::is_static_tensor(size_t orig_size, std::string callpath_hash) {
+    return nullptr;
 }
 
 }  // namespace c10

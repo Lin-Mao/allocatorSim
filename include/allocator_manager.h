@@ -91,9 +91,12 @@ private:
     std::map<uint64_t, bool> op_id_map;
     std::unordered_map<uint64_t, Block*> free_blocks;
 
-    std::vector<std::string> py_hash_vector;
-    std::vector<std::string> cpp_hash_vector;
-    std::vector<std::string> whole_hash_vector;
+    bool is_profiling_mode = false;
+    bool is_executing_mode = false;
+    bool is_first_run = true;   // can be eliminated after fixing torch.cuda.enable_profiling()
+    size_t total_active_size = 0;
+    std::map<void*, std::string> ptr_to_callpath_hash_map;
+    std::set<std::string> unique_hash_trace;
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
@@ -164,7 +167,7 @@ public:
 
     void show_allocator_memory_usage();
 
-    void collect_trace(void* ptr, int64_t size, bool is_malloc = false);
+    void collect_trace(void* ptr, int64_t size, std::string cp_hash = "");
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
 
@@ -175,6 +178,18 @@ public:
     size_t get_grouped_allocation_size(size_t size);
 
     size_t get_allocation_size(size_t size);
+
+    void* collect_callpath(size_t orig_size, void* ptr);
+
+    std::string get_callpath_hash();
+
+    void* is_static_tensor(size_t orig_size, std::string callpath_hash);
+
+    void enable_profiling(bool enable);
+
+    void load_optimization_suggestion(std::string filename);
+
+    void load_at_first_run();
 
 };
 
