@@ -73,6 +73,12 @@ struct Configs {
             kMinLargeAlloc, kRoundLarge, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
 };
 
+// For torch.cuda.enable_profiling()
+void set_profiling_mode(bool mode);
+bool get_profiling_mode();
+void set_executing_mode(bool mode);
+bool get_executing_mode();
+
 class allocatorMgr {
 private:
     int device;
@@ -80,23 +86,14 @@ private:
     allocatorSim alloc_sim;
     
     uint64_t op_id = 0;
-    bool initial_opt = true;
     size_t current_reserved_size = std::numeric_limits<size_t>::max();
     std::map<void*, std::pair<uint64_t, size_t>> _active_blocks;
     blockMap_t _trace;
-    Configs original_configs;
-    Configs searched_configs;
 
     // <op_id, malloc/free>
     std::map<uint64_t, bool> op_id_map;
     std::unordered_map<uint64_t, Block*> free_blocks;
 
-    bool is_profiling_mode = false;
-    bool is_executing_mode = false;
-    bool is_first_run = true;   // can be eliminated after fixing torch.cuda.enable_profiling()
-    size_t total_active_size = 0;
-    std::map<void*, std::string> ptr_to_callpath_hash_map;
-    std::set<std::string> unique_hash_trace;
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
     const std::set<size_t> kSmallSize_candidates {1048576/2, 1048576, 1048576*3/2, 1048576*2};
@@ -144,6 +141,10 @@ private:
 
     void group_blocks(const float& difference);
 
+    bool iter_end(bool begin, size_t active_size);
+
+    std::string get_callpath_hash();
+    
     std::string get_python_states();
     
 public:
@@ -167,7 +168,7 @@ public:
 
     void show_allocator_memory_usage();
 
-    void collect_trace(void* ptr, int64_t size, std::string cp_hash = "");
+    void collect_trace(void* ptr, int64_t size);
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
 
@@ -179,17 +180,7 @@ public:
 
     size_t get_allocation_size(size_t size);
 
-    void* collect_callpath(size_t orig_size, void* ptr);
-
-    std::string get_callpath_hash();
-
-    void* is_static_tensor(size_t orig_size, std::string callpath_hash);
-
-    void enable_profiling(bool enable);
-
-    void load_optimization_suggestion(std::string filename);
-
-    void load_at_first_run();
+    bool check_callpath();
 
 };
 

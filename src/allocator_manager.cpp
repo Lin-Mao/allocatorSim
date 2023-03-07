@@ -10,8 +10,96 @@ namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
+namespace {
+    bool is_profiling_mode = false;
+
+    size_t iteration = 0;
+    // <callpath_hash, <total_size, num_allocations>>
+    std::map<std::string, std::pair<size_t, size_t>> static_tensor_callpaths;
+    std::set<std::string> reclaimed_callpaths;
+    std::map<void*, std::string> ptr2callpath;
+    std::string dump_file_name = "optimized_configs.txt";
+
+
+    std::set<std::string> unique_hash_trace;
+
+    Configs original_configs;
+    Configs searched_configs;
+}
+
 const static size_t MAX_NUM_STATES = 30;
 thread_local static python_state_t python_states[MAX_NUM_STATES];
+
+void load_opt_guidance(std::string filename) {
+    std::ifstream in(filename);
+    assert(in.good() && "Cannot open the file");
+    in >> searched_configs.kMinBlockSize;
+    in >> searched_configs.kSmallSize;
+    in >> searched_configs.kSmallBuffer;
+    in >> searched_configs.kLargeBuffer;
+    in >> searched_configs.kMinLargeAlloc;
+    in >> searched_configs.kRoundLarge;
+
+    for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
+        in >> allocatorConf::_GROUPS[i];
+    }
+
+    std::string line;
+    while (std::getline(in, line)) {
+        unique_hash_trace.emplace(line);
+    }
+    in.close();
+
+    std::cout << searched_configs.kMinBlockSize << std::endl;
+    std::cout << searched_configs.kSmallSize << std::endl;
+    std::cout << searched_configs.kSmallBuffer << std::endl;
+    std::cout << searched_configs.kLargeBuffer << std::endl;
+    std::cout << searched_configs.kMinLargeAlloc << std::endl;
+    std::cout << searched_configs.kRoundLarge << std::endl;
+    for (auto htrace : unique_hash_trace) {
+        std::cout << htrace << std::endl;
+    }
+}
+
+void dump_opt_guidance(std::string filename) {
+    std::ofstream out(filename);
+    out << searched_configs.kMinBlockSize << std::endl;
+    out << searched_configs.kSmallSize << std::endl;
+    out << searched_configs.kSmallBuffer << std::endl;
+    out << searched_configs.kLargeBuffer << std::endl;
+    out << searched_configs.kMinLargeAlloc << std::endl;
+    out << searched_configs.kRoundLarge << std::endl;
+
+    for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
+        out << allocatorConf::_GROUPS[i] << std::endl;
+    }
+
+    for (auto stc : static_tensor_callpaths) {
+        out << stc.first << std::endl;
+        
+        // print callpath, size, count for debugging
+        std::cout << "static tensor callpath: " << stc.first
+                     << " size: " << stc.second.first
+                     << " count: " << stc.second.second << std::endl;
+    }
+    out.close();
+}
+
+void set_profiling_mode(bool mode) {
+    is_profiling_mode = mode;
+    if (!mode) {
+        load_opt_guidance(dump_file_name);
+    }
+    
+}
+
+bool get_profiling_mode() {
+    return is_profiling_mode;
+}
+
+/********************************************************************************
+ ******************** Function definitions of allocatorMgr **********************
+********************************************************************************/
 
 allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
 }
@@ -230,23 +318,46 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
     );
 }
 
-void allocatorMgr::collect_trace(void* ptr, int64_t size, std::string cp_hash) {
+void allocatorMgr::collect_trace(void* ptr, int64_t size) {
     if (size > 0) {  // malloc
-        if (is_profiling_mode) {  // original malloc
-            total_active_size += size;
-            ptr_to_callpath_hash_map.emplace(ptr, cp_hash);
+        if (get_profiling_mode()) {
+            auto callpath = get_callpath_hash();
+            ptr2callpath.emplace(ptr, callpath);
+
+            // static tensor analysis
+            if (reclaimed_callpaths.find(callpath) == reclaimed_callpaths.end()) {
+                auto static_tensor_cp = static_tensor_callpaths.find(callpath);
+                if (iteration == 0) {
+                    if (static_tensor_cp == static_tensor_callpaths.end()) {
+                        static_tensor_callpaths.emplace(callpath, std::make_pair(size, 1));
+                    } else {
+                        static_tensor_cp->second.first += size;
+                        static_tensor_cp->second.second += 1;
+                    }
+                } else {
+                    if (static_tensor_cp != static_tensor_callpaths.end()) {
+                        static_tensor_cp->second.first += size;
+                        static_tensor_cp->second.second += 1;
+                    }
+                }
+            }
         }
         _active_blocks.emplace(ptr, std::make_pair(op_id, size));
         op_id++;
     } else {  // free
-        if (is_profiling_mode) {  // original malloc
-            auto ptr_to_cp_hash = ptr_to_callpath_hash_map.find(ptr);
-            total_active_size -= size;
-            ptr_to_callpath_hash_map.erase(ptr_to_cp_hash);
+        if (get_profiling_mode()) {
+            auto callpath = ptr2callpath.find(ptr);
+            if (callpath != ptr2callpath.end()) {
+                auto static_tensor_cp = static_tensor_callpaths.find(callpath->second);
+                if (static_tensor_cp != static_tensor_callpaths.end()) {
+                    static_tensor_callpaths.erase(static_tensor_cp);
+                }
+                reclaimed_callpaths.emplace(callpath->second);
+                ptr2callpath.erase(callpath);
+            } 
         }
         auto b = _active_blocks.find(ptr);
-        _trace.emplace(
-            b->second.first, std::make_pair(op_id, b->second.second));
+        _trace.emplace(b->second.first, std::make_pair(op_id, b->second.second));
         _active_blocks.erase(b);
         op_id++;
     }
@@ -261,58 +372,45 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
     free((void*)pointer);
 }
 
+bool allocatorMgr::iter_end(bool begin, size_t active_size) {
+    bool result = false;
+    if (get_profiling_mode()) {
+        if (iteration == 0) { // search configs after the first iteration
+            process_trace();
+            current_reserved_size = simulate_allocator();
+            search_config_with_group();
+        }
+
+        size_t max_monitored_iterations = 2;
+        if (iteration == max_monitored_iterations) {
+            // dump configs
+            dump_opt_guidance(dump_file_name);
+            
+        }
+    }
+    else {
+        if (false) { // change to optimize at beginning, always false for now
+            process_trace();
+            current_reserved_size = simulate_allocator();
+            // search_config();
+            // search_group();
+            search_config_with_group();
+            result = true;
+            _active_blocks.clear();
+        }
+    }
+
+    _trace.clear();
+    iteration++;
+    return result;
+}
+
 bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
     size_t result = false;
     if (begin) {
         // do something
     } else {
-        if (is_profiling_mode) {
-            if (initial_opt) {
-                process_trace();
-                current_reserved_size = simulate_allocator();
-                search_config_with_group();
-
-                initial_opt = false;
-                result = false;
-
-                std::ofstream out("optimization_suggestion.txt");
-                out << total_active_size << std::endl;
-                
-                out << searched_configs.kMinBlockSize << std::endl;
-                out << searched_configs.kSmallSize << std::endl;
-                out << searched_configs.kSmallBuffer << std::endl;
-                out << searched_configs.kLargeBuffer << std::endl;
-                out << searched_configs.kMinLargeAlloc << std::endl;
-                out << searched_configs.kRoundLarge << std::endl;
-
-                for (auto pcp : ptr_to_callpath_hash_map) {
-                    unique_hash_trace.emplace(pcp.second);
-                }
-
-                for (auto cp : unique_hash_trace) {
-                    out << cp << std::endl;
-                }
-
-                unique_hash_trace.clear();
-                out.close();
-
-                _active_blocks.clear();
-            }
-            _trace.clear();
-        }
-        else if (is_executing_mode) {
-            if (initial_opt) {
-                process_trace();
-                current_reserved_size = simulate_allocator();
-                // search_config();
-                // search_group();
-                search_config_with_group();
-                result = true;
-                initial_opt = false;
-                _active_blocks.clear();
-            }
-            _trace.clear();
-        }
+        result = iter_end(begin, active_size);
     }
     return result;
 }
@@ -535,8 +633,16 @@ size_t allocatorMgr::get_allocation_size(size_t size) {
     }
 }
 
+std::string allocatorMgr::get_callpath_hash() {
+    auto python_states = get_python_states();
+    auto cpp_callpath = get_backtrace();
+    return sha256(python_states + cpp_callpath);
+    // return python_states + cpp_callpath;
+}
+
 std::string allocatorMgr::get_python_states() {
     size_t num_states = 0;
+
     python_state_get(MAX_NUM_STATES, python_states, &num_states);
 
     std::stringstream ss;
@@ -551,61 +657,16 @@ std::string allocatorMgr::get_python_states() {
     return ss.str();
 }
 
-void allocatorMgr::enable_profiling(bool enable) {
-    if (enable) {
-        is_profiling_mode = true;
-    } else {
-        is_executing_mode = true;
-        load_optimization_suggestion("opt_suggestion.txt");
+bool allocatorMgr::check_callpath() {
+    if (iteration == 0 && !get_profiling_mode()) {
+        auto callpath_hash = get_callpath_hash();
+        std::cout << "callpath_hash: " << callpath_hash << std::endl;
+        auto it = unique_hash_trace.find(callpath_hash);
+        if (it != unique_hash_trace.end()) {
+            return true;
+        }
     }
-}
-
-void allocatorMgr::load_at_first_run() {
-    if (is_first_run && is_executing_mode) {
-        load_optimization_suggestion("optimization_suggestion.txt");
-        is_first_run = false;
-    }
-}
-
-std::string allocatorMgr::get_callpath_hash() {
-    if (is_profiling_mode || is_executing_mode) {
-        auto python_states = get_python_states();
-        auto cpp_callpath = get_backtrace();
-        return sha256(python_states + cpp_callpath);
-    }
-    return "";  
-}
-
-void allocatorMgr::load_optimization_suggestion(std::string filename) {
-    std::ifstream in(filename);
-    in >> total_active_size;
-    in >> searched_configs.kMinBlockSize;
-    in >> searched_configs.kSmallSize;
-    in >> searched_configs.kSmallBuffer;
-    in >> searched_configs.kLargeBuffer;
-    in >> searched_configs.kMinLargeAlloc;
-    in >> searched_configs.kRoundLarge;
-
-    std::string line;
-    while (std::getline(in, line)) {
-        unique_hash_trace.emplace(line);
-    }
-    in.close();
-
-    std::cout << total_active_size << std::endl;
-    std::cout << searched_configs.kMinBlockSize << std::endl;
-    std::cout << searched_configs.kSmallSize << std::endl;
-    std::cout << searched_configs.kSmallBuffer << std::endl;
-    std::cout << searched_configs.kLargeBuffer << std::endl;
-    std::cout << searched_configs.kMinLargeAlloc << std::endl;
-    std::cout << searched_configs.kRoundLarge << std::endl;
-    for (auto htrace : unique_hash_trace) {
-        std::cout << htrace << std::endl;
-    }
-}
-
-void* allocatorMgr::is_static_tensor(size_t orig_size, std::string callpath_hash) {
-    return nullptr;
+    return false;
 }
 
 }  // namespace c10
