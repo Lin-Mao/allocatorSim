@@ -108,8 +108,6 @@ private:
         kLargeBuffer_candidates, kMinLargeAlloc_candidates, kRoundLarge_candidates
     };
 
-    bool group_enable_flag = false;
-
     float current_difference = 0.0;
 
 private:

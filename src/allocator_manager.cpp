@@ -13,6 +13,8 @@ namespace AllocatorSim {
 namespace {
     bool is_profiling_mode = false;
 
+    bool group_enable_flag = false;
+
     size_t iteration = 0;
     // <callpath_hash, <total_size, num_allocations>>
     std::map<std::string, std::pair<size_t, size_t>> static_tensor_callpaths;
@@ -42,6 +44,10 @@ void load_opt_guidance(std::string filename) {
 
     for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
         in >> allocatorConf::_GROUPS[i];
+    }
+
+    if (allocatorConf::_GROUPS[0] < std::numeric_limits<size_t>::max()) {
+        group_enable_flag = true;
     }
 
     std::string line;
@@ -313,8 +319,8 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
         allocatorConf::get_kLargeBuffer(),
         allocatorConf::get_kMinLargeAlloc(),
         allocatorConf::get_kRoundLarge(),
-        reserved_size,
-        allocated_size
+        allocated_size,
+        reserved_size
     );
 }
 
@@ -660,7 +666,6 @@ std::string allocatorMgr::get_python_states() {
 bool allocatorMgr::check_callpath() {
     if (iteration == 0 && !get_profiling_mode()) {
         auto callpath_hash = get_callpath_hash();
-        std::cout << "callpath_hash: " << callpath_hash << std::endl;
         auto it = unique_hash_trace.find(callpath_hash);
         if (it != unique_hash_trace.end()) {
             return true;
