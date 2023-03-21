@@ -144,15 +144,6 @@ private:
     std::string get_callpath_hash();
     
     std::string get_python_states();
-    
-public:
-    allocatorMgr();
-
-    allocatorMgr(int device, int stream);
-
-    ~allocatorMgr();
-
-    void test_simulator();
 
     void empty_cache();
 
@@ -166,6 +157,17 @@ public:
 
     void show_allocator_memory_usage();
 
+    size_t get_grouped_allocation_size(size_t size);
+    
+public:
+    allocatorMgr();
+
+    allocatorMgr(int device, int stream);
+
+    ~allocatorMgr();
+
+    void test_simulator();
+
     void collect_trace(void* ptr, int64_t size);
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
@@ -173,8 +175,6 @@ public:
     char* malloc_cpu_memory_chunk(size_t size);
 
     void free_cpu_memory_chunk(char* pointer);
-
-    size_t get_grouped_allocation_size(size_t size);
 
     size_t get_allocation_size(size_t size);
 
