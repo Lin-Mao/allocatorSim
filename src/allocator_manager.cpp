@@ -96,7 +96,6 @@ void set_profiling_mode(bool mode) {
     if (!mode) {
         load_opt_guidance(dump_file_name);
     }
-    
 }
 
 bool get_profiling_mode() {
@@ -227,9 +226,7 @@ void allocatorMgr::search_config() {
                             reset_allocator_memory_usage();
                             empty_cache();
                         }
-
                     }
-
                 }
             }
         }
@@ -291,9 +288,7 @@ void allocatorMgr::search_config_with_group() {
                                 empty_cache();
                             }
                         }
-
                     }
-
                 }
             }
         }
@@ -391,7 +386,6 @@ bool allocatorMgr::iter_end(bool begin, size_t active_size) {
         if (iteration == max_monitored_iterations) {
             // dump configs
             dump_opt_guidance(dump_file_name);
-            
         }
     }
     else {
