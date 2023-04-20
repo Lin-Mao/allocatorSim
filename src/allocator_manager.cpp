@@ -115,6 +115,8 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 }
 
 allocatorMgr::~allocatorMgr() {
+    std::cout << "after reserved size: " << get_reserved_bytes() << std::endl;
+    std::cout << "after allocated size: " << get_allocated_bytes() << std::endl;
 }
 
 void allocatorMgr::test_simulator() {
@@ -317,6 +319,36 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
         allocated_size,
         reserved_size
     );
+}
+
+
+void allocatorMgr::collect_trace_sync(void* ptr, int64_t size) {
+    if (size > 0) {  // malloc
+        Block* block = this->alloc_sim.malloc(this->device, size, this->stream);
+        // reuse free blocks to avoid more unecessary variables
+        free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block);    
+    } else {  // free
+        this->alloc_sim.free(free_blocks[reinterpret_cast<uint64_t>(ptr)]);
+        free_blocks.erase(reinterpret_cast<uint64_t>(ptr));
+    }
+}
+
+// For functionality test
+void allocatorMgr::functionality_test() {
+    if (!_active_blocks.empty()) {
+        for (auto b : _active_blocks) {
+            _trace.emplace(b.second.first, std::make_pair(op_id, b.second.second));
+            op_id++;
+        }
+    }
+
+    std::cout << "before reserved size: " << get_reserved_bytes() << std::endl;
+    std::cout << "before allocated size: " << get_allocated_bytes() << std::endl;
+    process_trace();
+    simulate_allocator();
+    std::cout << "after reserved size: " << get_reserved_bytes() << std::endl;
+    std::cout << "after allocated size: " << get_allocated_bytes() << std::endl;
+    
 }
 
 void allocatorMgr::collect_trace(void* ptr, int64_t size) {

@@ -321,11 +321,11 @@ void allocatorSim::free_block(Block* block) {
     const std::array<Block*, 2> merge_candidates = {block->prev, block->next};
 
     for (Block* merge_candidate : merge_candidates) {
-    const int64_t subsumed_size = try_merge_blocks(block, merge_candidate, pool);
-    if (subsumed_size > 0) {
-        net_change_inactive_split_blocks -= 1;
-        net_change_inactive_split_size -= subsumed_size;
-    }
+        const int64_t subsumed_size = try_merge_blocks(block, merge_candidate, pool);
+        if (subsumed_size > 0) {
+            net_change_inactive_split_blocks -= 1;
+            net_change_inactive_split_size -= subsumed_size;
+        }
     }
 
     bool inserted = pool.blocks.insert(block).second;

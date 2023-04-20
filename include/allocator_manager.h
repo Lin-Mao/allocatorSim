@@ -168,6 +168,10 @@ public:
 
     void test_simulator();
 
+    void functionality_test();
+
+    void collect_trace_sync(void* ptr, int64_t size);
+
     void collect_trace(void* ptr, int64_t size);
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
