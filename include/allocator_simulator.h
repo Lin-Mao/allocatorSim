@@ -25,6 +25,8 @@ private:
     size_t max_allocated_bytes;
     size_t current_allocated_bytes;
 
+    std::unordered_map<uint64_t, Block*> releasable_blocks;
+
     allocatorProf* allocator_prof;
 
     bool group_enable_flag_sim = false;
@@ -42,9 +44,7 @@ private:
 
     void garbage_collect_cached_blocks();
 
-    bool alloc_block(AllocParams& p, bool isRetry);
-
-    void release_block(Block* block);
+    bool alloc_block(AllocParams& p, bool isRetry, void* o_ptr);
 
     bool release_available_cached_blocks(AllocParams& p);
 
@@ -65,11 +65,15 @@ public:
 
     void test_allocator();
 
-    Block* malloc(int device, size_t orig_size, int stream);
+    Block* malloc(int device, size_t orig_size, int stream, void* ptr = nullptr);
 
     void free(Block* block);
 
     bool release_cached_blocks();
+
+    void release_block(Block* block);
+
+    Block* retrieve_released_block(uint64_t ptr);
 
     std::pair<size_t, size_t> get_max_memory_usage();
 

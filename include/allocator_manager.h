@@ -2,7 +2,6 @@
 #define ALLOCATOR_MANAGER_H
 
 #include "allocator_simulator.h"
-#include <unordered_map>
 
 namespace c10 {
 namespace cuda {
@@ -93,6 +92,7 @@ private:
     // <op_id, malloc/free>
     std::map<uint64_t, bool> op_id_map;
     std::unordered_map<uint64_t, Block*> free_blocks;
+    std::unordered_map<void*, uint64_t> realptr2simptr;
 
 
     const std::set<size_t> kMinBlockSize_candidates {256, 512, 1024, 2048, 4096};
@@ -170,7 +170,8 @@ public:
 
     void functionality_test();
 
-    void collect_trace_sync(void* ptr, int64_t size);
+    // real is to determine if it's a real (de)allocation
+    void collect_trace_sync(void* ptr, int64_t size, bool real = false);
 
     void collect_trace(void* ptr, int64_t size);
 

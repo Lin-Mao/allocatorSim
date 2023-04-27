@@ -13,6 +13,7 @@
 #include <memory>
 #include <sstream>
 #include <chrono>
+#include <unordered_map>
 
 namespace c10 {
 namespace cuda {

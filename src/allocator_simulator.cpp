@@ -132,6 +132,17 @@ size_t allocatorSim::get_allocation_size(size_t size) {
     }
 }
 
+Block* allocatorSim::retrieve_released_block(uint64_t ptr) {
+    auto it = releasable_blocks.find(ptr);
+    if (it == releasable_blocks.end()) {
+        return nullptr;
+    } else {
+        auto block = it->second;
+        releasable_blocks.erase(it);
+        return block;
+    }
+}
+
 bool allocatorSim::get_free_block(AllocParams& p) {
     BlockPool& pool = *p.pool;
     auto it = pool.blocks.lower_bound(&p.search_key);
@@ -140,12 +151,12 @@ bool allocatorSim::get_free_block(AllocParams& p) {
     if ((p.size() >= allocatorConf::get_max_split_size()) &&
         ((*it)->size >= p.size() + allocatorConf::get_kLargeBuffer()))
         return false;
-    if ((p.size() >= allocatorConf::get_max_split_size()) &&
-        ((*it)->size >= p.size() + allocatorConf::get_kLargeBuffer()))
-        return false;
     p.block = *it;
     (*it)->gc_count = 0; // Denote this block has been used
     pool.blocks.erase(it);
+    if (releasable_blocks.find(p.block->ptr) != releasable_blocks.end()) {
+        releasable_blocks.erase(p.block->ptr);
+    }
     return true;
 }
 
@@ -158,10 +169,10 @@ void allocatorSim::garbage_collect_cached_blocks() {
     // skip
 }
 
-bool allocatorSim::alloc_block(AllocParams& p, bool isRetry) {
+bool allocatorSim::alloc_block(AllocParams& p, bool isRetry, void* o_ptr) {
     size_t size = p.alloc_size;
     uint64_t ptr = segment_address;
-    p.block = new Block(p.device(), p.stream(), size, p.pool, ptr);
+    p.block = new Block(p.device(), p.stream(), size, p.pool, reinterpret_cast<uint64_t>(o_ptr));
 
     segment_address += size + allocatorConf::get_memory_segment_address_interval();
     current_reserved_bytes += size;
@@ -200,7 +211,7 @@ bool allocatorSim::should_split(const Block* block, size_t size) {
     }
 }
 
-Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
+Block* allocatorSim::malloc(int device, size_t orig_size, int stream, void* o_ptr) {
     size_t size = round_size(orig_size);
     auto& pool = get_pool(size, stream);
     const size_t alloc_size = get_allocation_size(size);
@@ -216,13 +227,13 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
             garbage_collect_cached_blocks();
         }
         // Attempt allocate
-        block_found = alloc_block(params, false)
+        block_found = alloc_block(params, false, o_ptr)
             // Free enough available cached blocks to satisfy alloc and retry
             // alloc.
             || (release_available_cached_blocks(params) &&
-                alloc_block(params, false))
+                alloc_block(params, false, o_ptr))
             // Free all non-split cached blocks and retry alloc.
-            || (release_cached_blocks() && alloc_block(params, true));
+            || (release_cached_blocks() && alloc_block(params, true, o_ptr));
 
         if (block_found) {
             allocator_prof->update_segment_create(params.block, alloc_size);
@@ -232,8 +243,9 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
     if (!block_found) {
         // OOM
         assert(block_found);
-        assert(params.block != nullptr && params.block->ptr != 0);
     }
+
+    assert(params.block != nullptr && params.block->ptr != 0);
 
     Block* block = params.block;
     Block* remaining = nullptr;
@@ -246,7 +258,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
         block = new Block(device, stream, size, &pool, block->ptr);
         block->prev = remaining->prev;
         if (block->prev) {
-        block->prev->next = block;
+            block->prev->next = block;
         }
         block->next = remaining;
 
@@ -254,6 +266,7 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream) {
         remaining->ptr = remaining->ptr + static_cast<uint64_t>(size);
         remaining->size -= size;
 
+        // This won't be taken
         auto iter = pool.blocks.find(remaining);
         if (iter != pool.blocks.end()) {
             std::cout << "iter != pool.blocks.end()" << std::endl;
@@ -326,6 +339,10 @@ void allocatorSim::free_block(Block* block) {
             net_change_inactive_split_blocks -= 1;
             net_change_inactive_split_size -= subsumed_size;
         }
+    }
+
+    if (block->prev == nullptr && block->next == nullptr) {
+        releasable_blocks.emplace(block->ptr, block);
     }
 
     bool inserted = pool.blocks.insert(block).second;

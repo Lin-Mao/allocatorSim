@@ -112,11 +112,18 @@ allocatorMgr::allocatorMgr() : allocatorMgr(0, 0) {
 allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
+
+    std::ofstream out1("/home/lm/torch/torch1/pytorch/third_party/allocatorSim/output/allocator.txt");
+    out1 << "";
+    out1.close();
+    std::ofstream out2("/home/lm/torch/torch1/pytorch/third_party/allocatorSim/output/simulator.txt");
+    out2 << "";
+    out2.close();
 }
 
 allocatorMgr::~allocatorMgr() {
-    std::cout << "after reserved size: " << get_reserved_bytes() << std::endl;
-    std::cout << "after allocated size: " << get_allocated_bytes() << std::endl;
+    std::cout << "Simulator max reserved size: " << get_reserved_bytes() << std::endl;
+    std::cout << "Simulator max allocated size: " << get_allocated_bytes() << std::endl;
 }
 
 void allocatorMgr::test_simulator() {
@@ -321,15 +328,29 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
     );
 }
 
-
-void allocatorMgr::collect_trace_sync(void* ptr, int64_t size) {
+// check the functionality of the simulator by synchronously running it
+void allocatorMgr::collect_trace_sync(void* ptr, int64_t size, bool real) {
     if (size > 0) {  // malloc
-        Block* block = this->alloc_sim.malloc(this->device, size, this->stream);
-        // reuse free blocks to avoid more unecessary variables
-        free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block);    
+        if (real) {
+            Block* block = this->alloc_sim.malloc(this->device, size, this->stream, ptr);
+            // reuse free blocks to avoid more unecessary variables
+            free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block); 
+            realptr2simptr.emplace(ptr, block->ptr);
+        } else {
+            Block* block = this->alloc_sim.malloc(this->device, size, this->stream, ptr);
+            free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block);
+        }    
     } else {  // free
-        this->alloc_sim.free(free_blocks[reinterpret_cast<uint64_t>(ptr)]);
-        free_blocks.erase(reinterpret_cast<uint64_t>(ptr));
+        if (real) {
+            auto sim_ptr = realptr2simptr[ptr];
+            auto block = this->alloc_sim.retrieve_released_block(sim_ptr);
+            this->alloc_sim.release_block(block);
+            realptr2simptr.erase(ptr);
+        } else {
+            this->alloc_sim.free(free_blocks[reinterpret_cast<uint64_t>(ptr)]);
+            free_blocks.erase(reinterpret_cast<uint64_t>(ptr));
+        }
+        
     }
 }
 
