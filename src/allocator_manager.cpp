@@ -113,12 +113,6 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
 
-    std::ofstream out1("/home/lm/torch/torch1/pytorch/third_party/allocatorSim/output/allocator.txt");
-    out1 << "";
-    out1.close();
-    std::ofstream out2("/home/lm/torch/torch1/pytorch/third_party/allocatorSim/output/simulator.txt");
-    out2 << "";
-    out2.close();
 }
 
 allocatorMgr::~allocatorMgr() {
