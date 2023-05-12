@@ -15,15 +15,77 @@ namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
+#define DUMP_INFO_TO_FILE_DEBUGGING
+
+class deviceAllocator {
+private:
+    std::set<MemoryRange> available_memory;
+    std::set<MemoryRange> allocated_memory;
+
+public:
+    deviceAllocator() {
+        auto base_addr = allocatorConf::get_memory_segment_address_start();
+        auto max_addr = std::numeric_limits<size_t>::max();
+        available_memory.insert(MemoryRange(base_addr, max_addr));
+    }
+
+    ~deviceAllocator() {
+        available_memory.clear();
+    }
+
+    void show() {
+        for (auto m : available_memory) {
+            std::cout << "[" << m.start << ", " << m.end << "]";
+        }
+        std::cout << std::endl;
+    }
+
+    bool allocate(uint64_t& ptr, size_t size) {
+        auto it = available_memory.begin();
+        while (it != available_memory.end()) {
+            auto range_size = it->end - it->start;
+            if (range_size >= size) {
+                ptr = it->start;
+                available_memory.erase(it);
+                if (range_size > size) {
+                    available_memory.insert(MemoryRange(ptr + size, it->end));
+                }
+                allocated_memory.insert(MemoryRange(ptr, ptr + size));
+                return true;
+            }
+            ++it;
+        }
+        return false;
+    }
+
+    void free(uint64_t ptr, size_t size) {
+        auto range = MemoryRange(ptr, ptr + size);
+        allocated_memory.erase(range);
+        auto rit = available_memory.upper_bound(range);
+        auto lit = std::prev(rit);
+
+        if (lit->end == range.start) {
+            range.start = lit->start;
+            available_memory.erase(lit);
+        }
+        if (rit->start == range.end) {
+            range.end = rit->end;
+            available_memory.erase(rit);
+        }
+        available_memory.insert(range);
+    }
+};
+
 class allocatorSim {
 private:
     BlockPool small_blocks;
     BlockPool large_blocks;
-    uint64_t segment_address = allocatorConf::get_memory_segment_address_start();
     size_t max_reserved_bytes;
     size_t current_reserved_bytes;
     size_t max_allocated_bytes;
     size_t current_allocated_bytes;
+
+    deviceAllocator device_allocator;
 
     std::unordered_map<uint64_t, Block*> releasable_blocks;
 
