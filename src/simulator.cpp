@@ -7,8 +7,8 @@
 #include "allocator_simulator.h"
 #include "allocator_manager.h"
 
-using trace_type_t = c10::cuda::AllocatorSim::blockMap_t;
-using trace_t = std::map<uint64_t, std::pair<uint64_t, size_t>>;
+using trace_type_t = c10::cuda::AllocatorSim::trace_t;
+using trace_type = std::map<uint64_t, std::pair<uint64_t, size_t>>;
 
 std::vector<size_t> split_line(std::string str, const std::string c) {
     std::vector<size_t> vec;
@@ -55,7 +55,7 @@ std::pair<uint64_t, uint64_t> process_trace(std::string filename, trace_type_t& 
     return std::make_pair(min, max);
 }
 
-void generate_trace(const trace_type_t& block_map, trace_t& malloc_map, trace_t& free_map) {
+void generate_trace(const trace_type_t& block_map, trace_type& malloc_map, trace_type& free_map) {
     uint64_t ptr = c10::cuda::AllocatorSim::allocatorConf::get_memory_segment_address_start();
     uint64_t interval = c10::cuda::AllocatorSim::allocatorConf::get_memory_segment_address_interval();
 
@@ -67,7 +67,7 @@ void generate_trace(const trace_type_t& block_map, trace_t& malloc_map, trace_t&
     });
 }
 
-void run_allocator(const trace_t& malloc_map, const trace_t& free_map, uint64_t min, uint64_t max) {
+void run_allocator(const trace_type& malloc_map, const trace_type& free_map, uint64_t min, uint64_t max) {
     c10::cuda::AllocatorSim::allocatorMgr alloc_mgr;
 
     for (uint64_t i = min; i <= max; i++) {
@@ -90,8 +90,8 @@ int main() {
     // trace format(each line): start_op_id end_op_id tensor_size
     std::string trace_file = "./input/alexnet_train.log";
     trace_type_t input_block_map;
-    trace_t malloc_map;
-    trace_t free_map;
+    trace_type malloc_map;
+    trace_type free_map;
     uint64_t min, max;
 
     std::tie(min, max) = process_trace(trace_file, input_block_map);

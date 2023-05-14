@@ -15,8 +15,6 @@ namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
-#define DUMP_INFO_TO_FILE_DEBUGGING
-
 class deviceAllocator {
 private:
     std::set<MemoryRange> available_memory;
@@ -87,7 +85,11 @@ private:
 
     deviceAllocator device_allocator;
 
+    // <segment_ptr, first_block>: all the segments being able to release
     std::unordered_map<uint64_t, Block*> releasable_blocks;
+
+    // <ptr, <op_id, size>>
+    std::map<uint64_t, std::pair<uint64_t, size_t>> _active_segments;
 
     allocatorProf* allocator_prof;
 

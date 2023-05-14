@@ -1,9 +1,11 @@
 #include "allocator_manager.h"
 #include <cassert>
 #include <iomanip>
-#include "utils/python_states.h"
 #include "utils/hash.h"
+#include "utils/python_states.h"
 #include "utils/unwind_utils.h"
+#include "utils/sanitizer_api.h"
+
 #include <fstream>
 
 namespace c10 {
@@ -11,6 +13,8 @@ namespace cuda {
 namespace AllocatorSim {
 
 namespace {
+    bool enable_sync_collect_trace = true;
+
     bool is_profiling_mode = false;
 
     bool group_enable_flag = false;
@@ -27,7 +31,7 @@ namespace {
 
     Configs original_configs;
     Configs searched_configs;
-}
+}   // namespace
 
 const static size_t MAX_NUM_STATES = 30;
 thread_local static python_state_t python_states[MAX_NUM_STATES];
@@ -113,11 +117,16 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
 
+    // sanitizer_callbacks_subscribe();
+
 }
 
 allocatorMgr::~allocatorMgr() {
+    std::cout << "Simulator destructor called" << std::endl;
     std::cout << "Simulator max reserved size: " << get_reserved_bytes() << std::endl;
     std::cout << "Simulator max allocated size: " << get_allocated_bytes() << std::endl;
+    
+    // sanitizer_callbacks_unsubscribe();
 }
 
 void allocatorMgr::test_simulator() {
@@ -325,35 +334,40 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
 // check the functionality of the simulator by synchronously running it
 void allocatorMgr::collect_trace_sync(void* ptr, int64_t size, bool real) {
     if (size > 0) {  // malloc
-        if (real) {
-            Block* block = this->alloc_sim.malloc(this->device, size, this->stream, ptr);
-            // reuse free blocks to avoid more unecessary variables
-            free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block); 
-            realptr2simptr.emplace(ptr, block->ptr);
-        } else {
-            Block* block = this->alloc_sim.malloc(this->device, size, this->stream, ptr);
-            free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block);
-        }    
+        Block* block = this->alloc_sim.malloc(this->device, size, this->stream);
+        free_blocks.emplace(reinterpret_cast<uint64_t>(ptr), block);
     } else {  // free
-        if (real) {
-            auto sim_ptr = realptr2simptr[ptr];
-            auto block = this->alloc_sim.retrieve_released_block(sim_ptr);
-            this->alloc_sim.release_block(block);
-            realptr2simptr.erase(ptr);
-        } else {
-            this->alloc_sim.free(free_blocks[reinterpret_cast<uint64_t>(ptr)]);
-            free_blocks.erase(reinterpret_cast<uint64_t>(ptr));
+        if (real) { // release the block
+            return ;
         }
-        
+        auto block = free_blocks[reinterpret_cast<uint64_t>(ptr)];
+        this->alloc_sim.free(block);
+        free_blocks.erase(reinterpret_cast<uint64_t>(ptr));
     }
+    increase_global_op_id();
+}
+
+void allocatorMgr::process_empty_cache_api() {
+    if (enable_sync_collect_trace) {
+        empty_cache();
+    } else {
+        // collect emtpy cache event
+    }
+}
+
+void allocatorMgr::collect_api(AllocatorAPIType_t api_type) {
+    if (api_type == ALLOCATOR_EMPYT_CACHE_API) {
+        process_empty_cache_api();
+    }
+    increase_global_op_id();
 }
 
 // For functionality test
 void allocatorMgr::functionality_test() {
     if (!_active_blocks.empty()) {
         for (auto b : _active_blocks) {
-            _trace.emplace(b.second.first, std::make_pair(op_id, b.second.second));
-            op_id++;
+            _block_trace.emplace(b.second.first, std::make_pair(get_global_op_id(), b.second.second));
+            increase_global_op_id();
         }
     }
 
@@ -366,7 +380,19 @@ void allocatorMgr::functionality_test() {
     
 }
 
-void allocatorMgr::collect_trace(void* ptr, int64_t size) {
+void allocatorMgr::collect_trace_async(void* ptr, int64_t size, bool real) {
+
+}
+
+void allocatorMgr::collect_trace(void* ptr, int64_t size, bool real) {
+    if (enable_sync_collect_trace) {
+        collect_trace_sync(ptr, size, real);
+    } else {
+        collect_trace_async(ptr, size, real);
+    }
+}
+
+void allocatorMgr::collect_trace_stale(void* ptr, int64_t size) {
     if (size > 0) {  // malloc
         if (get_profiling_mode()) {
             auto callpath = get_callpath_hash();
@@ -390,8 +416,7 @@ void allocatorMgr::collect_trace(void* ptr, int64_t size) {
                 }
             }
         }
-        _active_blocks.emplace(ptr, std::make_pair(op_id, size));
-        op_id++;
+        _active_blocks.emplace(ptr, std::make_pair(get_global_op_id(), size));
     } else {  // free
         if (get_profiling_mode()) {
             auto callpath = ptr2callpath.find(ptr);
@@ -405,10 +430,10 @@ void allocatorMgr::collect_trace(void* ptr, int64_t size) {
             } 
         }
         auto b = _active_blocks.find(ptr);
-        _trace.emplace(b->second.first, std::make_pair(op_id, b->second.second));
+        _block_trace.emplace(b->second.first, std::make_pair(get_global_op_id(), b->second.second));
         _active_blocks.erase(b);
-        op_id++;
     }
+    increase_global_op_id();
 }
 
 char* allocatorMgr::malloc_cpu_memory_chunk(size_t size) {
@@ -447,7 +472,7 @@ bool allocatorMgr::iter_end(bool begin, size_t active_size) {
         }
     }
 
-    _trace.clear();
+    _block_trace.clear();
     iteration++;
     return result;
 }
@@ -463,7 +488,7 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
 }
 
 void allocatorMgr::process_trace() {
-    for (auto t : _trace) {
+    for (auto t : _block_trace) {
         op_id_map.emplace(t.first, true);
         op_id_map.emplace(t.second.first, false);
     }
@@ -472,9 +497,9 @@ void allocatorMgr::process_trace() {
 size_t allocatorMgr::simulate_allocator() {
     for (auto op : op_id_map) {
         if (op.second) {
-            auto orig_size = _trace[op.first].second;
+            auto orig_size = _block_trace[op.first].second;
             auto block = this->alloc_sim.malloc(this->device, orig_size, this->stream);
-            free_blocks.emplace(_trace[op.first].first, block);
+            free_blocks.emplace(_block_trace[op.first].first, block);
         } else {
             this->alloc_sim.free(free_blocks[op.first]);
         }
@@ -587,7 +612,7 @@ void allocatorMgr::show_allocator_memory_usage() {
 
 void allocatorMgr::group_blocks(const float& difference) {
     std::set<size_t> block_sizes;
-    for (auto t : _trace) {
+    for (auto t : _block_trace) {
         if (t.second.second > allocatorConf::get_kLargeBuffer()) {
             block_sizes.insert(t.second.second);
         }
