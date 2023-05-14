@@ -24,7 +24,9 @@ namespace AllocatorSim {
 
 #define DUMP_INFO_TO_FILE_DEBUGGING
 
-size_t get_global_op_id();
+typedef uint64_t op_id_t;
+
+op_id_t get_global_op_id();
 void increase_global_op_id();
 std::string get_dump_file_path();
 
@@ -41,7 +43,7 @@ struct MemoryRange;
 typedef bool (*Comparison)(const Block*, const Block*);
 
 // <malloc_op_id, <free_op_id, size>>
-typedef std::map<uint64_t, std::pair<uint64_t, size_t>> trace_t;
+typedef std::map<op_id_t, std::pair<op_id_t, size_t>> trace_t;
 
 struct Block {
     int device; // gpu

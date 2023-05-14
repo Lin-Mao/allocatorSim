@@ -8,13 +8,13 @@ namespace AllocatorSim {
 
 namespace {
 // the op_id is used in the whole code, include simulator and allocator
-size_t global_op_id = 0;
+op_id_t global_op_id = 0;
 
 std::string dump_file_path = "/home/lm/torch/torch1/pytorch/third_party/allocatorSim/output/";
 
 }  // anonymous namespace
 
-size_t get_global_op_id() {
+op_id_t get_global_op_id() {
     return global_op_id;
 }
 void increase_global_op_id() {

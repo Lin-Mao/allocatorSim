@@ -258,6 +258,10 @@ bool allocatorSim::release_cached_blocks() {
     return true;
 }
 
+void allocatorSim::empty_cache() {
+    release_cached_blocks();
+}
+
 bool allocatorSim::should_split(const Block* block, size_t size) {
     size_t remaining = block->size - size;
     if (block->pool->is_small) {

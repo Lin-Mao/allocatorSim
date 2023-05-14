@@ -89,7 +89,7 @@ private:
     std::unordered_map<uint64_t, Block*> releasable_blocks;
 
     // <ptr, <op_id, size>>
-    std::map<uint64_t, std::pair<uint64_t, size_t>> _active_segments;
+    std::map<uint64_t, std::pair<op_id_t, size_t>> _active_segments;
 
     allocatorProf* allocator_prof;
 
@@ -118,6 +118,8 @@ private:
 
     size_t try_merge_blocks(Block* dst, Block* src, BlockPool& pool);
 
+    bool release_cached_blocks();
+
     void release_blocks(BlockPool& pool);
 
     size_t get_grouped_allocation_size_sim(size_t size);
@@ -133,7 +135,7 @@ public:
 
     void free(Block* block);
 
-    bool release_cached_blocks();
+    void empty_cache();
 
     void release_block(Block* block);
 

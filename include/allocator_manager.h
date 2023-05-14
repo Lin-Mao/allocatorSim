@@ -72,10 +72,14 @@ struct Configs {
             kMinLargeAlloc, kRoundLarge, 0, 0, 0, 0.0, 0, 0, allocated_size, reserved_size) {}
 };
 
-typedef enum AllocatorAPIType {
-    ALLOCATOR_EMPYT_CACHE_API = 0,
-    NUMS_OF_ALLOCATOR_API = 1
-} AllocatorAPIType_t;
+typedef enum AllocatorEventType {
+    ALLOCATOR_MALLOC_BLOCK = 0,
+    ALLOCATOR_FREE_BLOCK = 1,
+    ALLOCATOR_MALLOC_SEGMENT = 2,
+    ALLOCATOR_RELEASE_SEGMENT = 3,
+    ALLOCATOR_EMPYT_CACHE = 4,
+    NUMS_OF_ALLOCATOR_EVENT = 5
+} AllocatorEventType_t;
 
 // For torch.cuda.enable_profiling()
 void set_profiling_mode(bool mode);
@@ -87,18 +91,21 @@ private:
     int stream;
     allocatorSim alloc_sim;
     
-    // uint64_t op_id = 0;
+
     size_t current_reserved_size = std::numeric_limits<size_t>::max();
-    std::map<void*, std::pair<uint64_t, size_t>> _active_blocks;
+    
+    // <ptr, <op_id, size>>
+    std::map<void*, std::pair<op_id_t, size_t>> _active_blocks;
     trace_t _block_trace;
+    std::map<op_id_t, AllocatorEventType_t> _api_trace;
 
     // not used, need to collect alloc_size if used
     // std::map<void*, std::pair<uint64_t, size_t>> _active_segments;
     // trace_t _segment_trace;
 
-    // <op_id, malloc/free>
-    std::map<uint64_t, bool> op_id_map;
-    std::unordered_map<uint64_t, Block*> free_blocks;
+    // <op_id, events>
+    std::map<op_id_t, AllocatorEventType_t> opid2event;
+    std::unordered_map<op_id_t, Block*> free_blocks;
 
     // may not be used
     std::unordered_map<void*, uint64_t> realptr2simptr;
@@ -168,13 +175,11 @@ private:
 
     void process_empty_cache_api();
 
-    void functionality_test();
+    void test_functionality_under_collect_trace_async();
 
     // real is to determine if it's a real (de)allocation
-    // synchronously run the simulator
     void collect_trace_sync(void* ptr, int64_t size, bool real = false);
 
-    // run the simulator after model finish
     void collect_trace_async(void* ptr, int64_t size, bool real = false);
 
     void collect_trace_stale(void* ptr, int64_t size);
@@ -192,7 +197,7 @@ public:
 
     void collect_trace(void* ptr, int64_t size, bool real = false);
 
-    void collect_api(AllocatorAPIType_t api_type);
+    void collect_api(AllocatorEventType_t api_type);
 
     bool iteration_trigger(bool begin = true, size_t size = 0);
 

@@ -13,7 +13,7 @@ namespace cuda {
 namespace AllocatorSim {
 
 namespace {
-    bool enable_sync_collect_trace = true;
+    bool enable_sync_collect_trace = false;
 
     bool is_profiling_mode = false;
 
@@ -127,6 +127,8 @@ allocatorMgr::~allocatorMgr() {
     std::cout << "Simulator max allocated size: " << get_allocated_bytes() << std::endl;
     
     // sanitizer_callbacks_unsubscribe();
+
+    test_functionality_under_collect_trace_async();
 }
 
 void allocatorMgr::test_simulator() {
@@ -191,7 +193,7 @@ void allocatorMgr::allocator_assert(bool expr) {
     if (expr) {
         return;
     } else {
-        std::cout << "[allocatorMgr::allocator_assert(bool expr)]" << std::endl;
+        std::cout << "[allocatorMgr::allocator_assert(bool expr)!!!]" << std::endl;
         report_configs(original_configs, searched_configs);
         assert(expr);
     }
@@ -331,6 +333,40 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
     );
 }
 
+void allocatorMgr::process_empty_cache_api() {
+    if (enable_sync_collect_trace) {
+        empty_cache();
+    } else {
+        // collect emtpy cache event
+        _api_trace.emplace(get_global_op_id(), ALLOCATOR_EMPYT_CACHE);
+    }
+}
+
+void allocatorMgr::collect_api(AllocatorEventType_t api_type) {
+    if (api_type == ALLOCATOR_EMPYT_CACHE) {
+        process_empty_cache_api();
+    }
+    increase_global_op_id();
+}
+
+// For functionality test
+void allocatorMgr::test_functionality_under_collect_trace_async() {
+    if (!_active_blocks.empty()) {
+        for (auto b : _active_blocks) {
+            _block_trace.emplace(b.second.first, std::make_pair(get_global_op_id(), b.second.second));
+            increase_global_op_id();
+        }
+    }
+
+    std::cout << "Before functionality check max reserved size: " << get_reserved_bytes() << std::endl;
+    std::cout << "Before functionality check max allocated size: " << get_allocated_bytes() << std::endl;
+    process_trace();
+    simulate_allocator();
+    std::cout << "After functionality check max reserved size: " << get_reserved_bytes() << std::endl;
+    std::cout << "After functionality check max allocated size: " << get_allocated_bytes() << std::endl;
+    
+}
+
 // check the functionality of the simulator by synchronously running it
 void allocatorMgr::collect_trace_sync(void* ptr, int64_t size, bool real) {
     if (size > 0) {  // malloc
@@ -347,41 +383,19 @@ void allocatorMgr::collect_trace_sync(void* ptr, int64_t size, bool real) {
     increase_global_op_id();
 }
 
-void allocatorMgr::process_empty_cache_api() {
-    if (enable_sync_collect_trace) {
-        empty_cache();
-    } else {
-        // collect emtpy cache event
-    }
-}
-
-void allocatorMgr::collect_api(AllocatorAPIType_t api_type) {
-    if (api_type == ALLOCATOR_EMPYT_CACHE_API) {
-        process_empty_cache_api();
+// check the simulation functionality of the simulator by asynchronously running it (run after trace collection)
+void allocatorMgr::collect_trace_async(void* ptr, int64_t size, bool real) {
+    if (size > 0) {  // malloc
+        _active_blocks.emplace(ptr, std::make_pair(get_global_op_id(), size));
+    } else {  // free
+        if (real) { // release the block
+            return ;
+        }
+        auto b = _active_blocks.find(ptr);
+        _block_trace.emplace(b->second.first, std::make_pair(get_global_op_id(), b->second.second));
+        _active_blocks.erase(b);
     }
     increase_global_op_id();
-}
-
-// For functionality test
-void allocatorMgr::functionality_test() {
-    if (!_active_blocks.empty()) {
-        for (auto b : _active_blocks) {
-            _block_trace.emplace(b.second.first, std::make_pair(get_global_op_id(), b.second.second));
-            increase_global_op_id();
-        }
-    }
-
-    std::cout << "before reserved size: " << get_reserved_bytes() << std::endl;
-    std::cout << "before allocated size: " << get_allocated_bytes() << std::endl;
-    process_trace();
-    simulate_allocator();
-    std::cout << "after reserved size: " << get_reserved_bytes() << std::endl;
-    std::cout << "after allocated size: " << get_allocated_bytes() << std::endl;
-    
-}
-
-void allocatorMgr::collect_trace_async(void* ptr, int64_t size, bool real) {
-
 }
 
 void allocatorMgr::collect_trace(void* ptr, int64_t size, bool real) {
@@ -489,19 +503,25 @@ bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
 
 void allocatorMgr::process_trace() {
     for (auto t : _block_trace) {
-        op_id_map.emplace(t.first, true);
-        op_id_map.emplace(t.second.first, false);
+        opid2event.emplace(t.first, ALLOCATOR_MALLOC_BLOCK);
+        opid2event.emplace(t.second.first, ALLOCATOR_FREE_BLOCK);
+    }
+
+    for (auto t : _api_trace) {
+        opid2event.emplace(t.first, t.second);
     }
 }
 
 size_t allocatorMgr::simulate_allocator() {
-    for (auto op : op_id_map) {
-        if (op.second) {
+    for (auto op : opid2event) {
+        if (op.second == ALLOCATOR_MALLOC_BLOCK) {
             auto orig_size = _block_trace[op.first].second;
             auto block = this->alloc_sim.malloc(this->device, orig_size, this->stream);
             free_blocks.emplace(_block_trace[op.first].first, block);
-        } else {
+        } else if (op.second == ALLOCATOR_FREE_BLOCK) {
             this->alloc_sim.free(free_blocks[op.first]);
+        } else if (op.second == ALLOCATOR_EMPYT_CACHE) {
+            empty_cache();
         }
     }
     free_blocks.clear();
@@ -583,7 +603,7 @@ void allocatorMgr::apply_configs(const Configs& configs) {
 }
 
 void allocatorMgr::empty_cache() {
-    alloc_sim.release_cached_blocks();
+    alloc_sim.empty_cache();
 }
 
 std::pair<size_t, size_t> allocatorMgr::get_allocator_memory_usage() {
