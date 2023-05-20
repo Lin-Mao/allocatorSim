@@ -74,6 +74,8 @@ public:
     }
 };
 
+bool BlockComparator(const Block* a, const Block* b);
+
 class allocatorSim {
 private:
     BlockPool small_blocks;
@@ -153,8 +155,8 @@ public:
 
 };
 
-}  // namespace c10
-}  // namespace cuda
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10
 
 #endif  // ALLOCATOR_SIMULATOR_H

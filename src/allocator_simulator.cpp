@@ -7,13 +7,14 @@
 #include <cassert>
 
 #include "allocator_simulator.h"
+#include <functional>
 
 namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
 
-static bool BlockComparator(const Block* a, const Block* b) {
+bool BlockComparator(const Block* a, const Block* b) {
     if (a->stream != b->stream) {
         return (int)a->stream < (int)b->stream;
     }
@@ -32,34 +33,6 @@ allocatorSim::allocatorSim()
     large_blocks = BlockPool(BlockComparator, false);
 
     allocator_prof = new allocatorProf();
-
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-    std::ofstream out1(get_dump_file_path() + "allocator.txt");
-    out1 << "";
-    out1.close();
-    std::ofstream out2(get_dump_file_path() + "simulator.txt");
-    out2 << "";
-    out2.close();
-    std::ofstream out3(get_dump_file_path() + "allocator_pools.txt");
-    out3 << "";
-    out3.close();
-    std::ofstream out4(get_dump_file_path() + "simulator_pools.txt");
-    out4 << "";
-    out4.close();
-    std::ofstream out5(get_dump_file_path() + "allocator_seg_events.txt");
-    out5 << "";
-    out5.close();
-    std::ofstream out6(get_dump_file_path() + "simulator_seg_events.txt");
-    out6 << "";
-    out6.close();
-    std::ofstream out7(get_dump_file_path() + "allocator_mem_layout.txt");
-    out7 << "";
-    out7.close();
-    std::ofstream out8(get_dump_file_path() + "simulator_mem_layout.txt");
-    out8 << "";
-    out8.close();
-#endif
-
 }
 
 allocatorSim::~allocatorSim() {
@@ -221,27 +194,25 @@ void allocatorSim::release_block(Block* block) {
     pool->blocks.erase(block);
     device_allocator.free(block->ptr, block->size);
 
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-    std::ofstream out1(get_dump_file_path() + "simulator.txt", std::ios::app);
-    out1 << get_global_op_id() << ": release: true, size: " << block->size
-        << ", allocated: " << current_allocated_bytes
-        << ", reserved: " << current_reserved_bytes << std::endl;
-    out1.close();
-
     _active_segments.erase(block->ptr);
 
-    std::ofstream out2(get_dump_file_path() + "simulator_mem_layout.txt", std::ios::app);
-    out2 << "op_id: " << get_global_op_id() << " free: " << block->ptr << " size: " << block->size << std::endl;
-    for (auto s : _active_segments) {
-        out2 << "[" << s.first << ", " << s.first + s.second.second << ") ";
-    }
-    out2 << std::endl;
-    out2.close();
+    auto free_op_info = std::make_tuple(true, block->size, current_allocated_bytes, current_reserved_bytes);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::BLOCK_FREE_OP_HISTORY,
+        std::bind(&DumpDebugging::dump_block_free_op, true, free_op_info)
+    );
 
-    std::ofstream out3(get_dump_file_path() + "simulator_seg_events.txt", std::ios::app);
-    out3 << "op_id: " << get_global_op_id() << ", release " << block->size << " bytes" << std::endl;
-    out3.close();
-#endif
+    auto layout_info = std::make_tuple(block->ptr, block->size, _active_segments);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::ACTIVE_SEGMENT_LAYOUT,
+        std::bind(&DumpDebugging::dump_segment_layout, true, layout_info)
+    );
+
+    auto segment_op_info = std::make_tuple(true, block->size);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::SEGMENT_OP_HISTORY, 
+        std::bind(&DumpDebugging::dump_segment_op, true, segment_op_info)
+    );
 
     delete block;
 }
@@ -278,19 +249,11 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream, void* o_pt
     const size_t alloc_size = get_allocation_size(size);
     AllocParams params(device, size, stream, &pool, alloc_size);
 
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-    std::ofstream out1(get_dump_file_path() + "simulator_pools.txt", std::ios::app);
-    out1 << "op_id: " << get_global_op_id() << std::endl;
-    for (auto b : small_blocks.blocks) {
-        out1 << b->size << " ";
-    }
-    out1 << std::endl;
-    for (auto b : large_blocks.blocks) {
-        out1 << b->size << " ";
-    }
-    out1 << std::endl;
-    out1.close();
-#endif
+    auto pools_info = std::make_tuple(small_blocks.blocks, large_blocks.blocks);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::BLOCK_POOLS_SNAPSHOT,
+        std::bind(&DumpDebugging::dump_block_pools_snapshot, true, pools_info)
+    );
 
     bool block_found = get_free_block(params)
         // Trigger callbacks and retry search
@@ -364,31 +327,27 @@ Block* allocatorSim::malloc(int device, size_t orig_size, int stream, void* o_pt
 
     allocator_prof->update_block_allocate(block);
 
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-    std::ofstream out2(get_dump_file_path() + "simulator.txt", std::ios::app);
-    out2 << get_global_op_id() << ": alloc: " << std::boolalpha << real_alloc << ", split: " << split_flag
-        << ", orig_size: " << orig_size << ", size: " << size << ", alloc_size: " << alloc_size
-        << ", before_split_size: " << before_split_size
-        << ", allocated: " << current_allocated_bytes << ", reserved: " << current_reserved_bytes << std::endl;
-    out2.close();
+    auto malloc_op_info = std::make_tuple(real_alloc, split_flag, orig_size, size, alloc_size, before_split_size, current_allocated_bytes, current_reserved_bytes);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::BLOCK_MALLOC_OP_HISTORY,
+        std::bind(&DumpDebugging::dump_block_malloc_op, true, malloc_op_info)
+    );
 
     if (real_alloc) {
         _active_segments.emplace(block->ptr, std::make_pair(get_global_op_id(), alloc_size));
 
-        std::ofstream out3(get_dump_file_path() + "simulator_mem_layout.txt", std::ios::app);
-        out3 << "op_id: " << get_global_op_id() << " malloc: " << block->ptr << " size: " << alloc_size << std::endl;
-        for (auto s : _active_segments) {
-            out3 << "[" << s.first << ", " << s.first + s.second.second << ") ";
-        }
-        out3 << std::endl;
-        out3.close();
+        auto segment_op_info = std::make_tuple(false, alloc_size);
+        DumpDebugging::dumpDebuggingInfo(
+            DumpDebugging::SEGMENT_OP_HISTORY, 
+            std::bind(&DumpDebugging::dump_segment_op, true, segment_op_info)
+        );
 
-        std::ofstream out4(get_dump_file_path() + "simulator_seg_events.txt", std::ios::app);
-        out4 << "op_id: " << get_global_op_id() << ", allocated " << alloc_size << " bytes" << std::endl;
-        out4.close();
+        auto layout_info = std::make_tuple(block->ptr, alloc_size, _active_segments);
+        DumpDebugging::dumpDebuggingInfo(
+            DumpDebugging::ACTIVE_SEGMENT_LAYOUT, 
+            std::bind(&DumpDebugging::dump_segment_layout, true, layout_info)    
+        );
     }
-#endif
-
     return block;
 }
 
@@ -455,19 +414,11 @@ void allocatorSim::free_block(Block* block) {
 }
 
 void allocatorSim::free(Block* block) {
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-    std::ofstream out1(get_dump_file_path() + "simulator_pools.txt", std::ios::app);
-    out1 << "op_id: " << get_global_op_id() << std::endl;
-    for (auto b : small_blocks.blocks) {
-        out1 << b->size << " ";
-    }
-    out1 << std::endl;
-    for (auto b : large_blocks.blocks) {
-        out1 << b->size << " ";
-    }
-    out1 << std::endl;
-    out1.close();
-#endif
+    auto pool_info = std::make_tuple(small_blocks.blocks, large_blocks.blocks);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::BLOCK_POOLS_SNAPSHOT,
+        std::bind(&DumpDebugging::dump_block_pools_snapshot, true, pool_info)
+    );
 
     block->allocated = false;
 
@@ -478,13 +429,11 @@ void allocatorSim::free(Block* block) {
 
     current_allocated_bytes -= orig_block_size;
 
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-    std::ofstream out(get_dump_file_path() + "simulator.txt", std::ios::app);
-    out << get_global_op_id() << ": free: true, size: " << orig_block_size
-        << ", allocated: " << current_allocated_bytes
-        << ", reserved: " << current_reserved_bytes << std::endl;
-    out.close();
-#endif
+    auto free_op_info = std::make_tuple(false, orig_block_size, current_allocated_bytes, current_reserved_bytes);
+    DumpDebugging::dumpDebuggingInfo(
+        DumpDebugging::BLOCK_FREE_OP_HISTORY, 
+        std::bind(&DumpDebugging::dump_block_free_op, true, free_op_info)
+    );
 
     // block is used to decide segment, keep size.
     allocator_prof->update_block_free(block, orig_block_size);
@@ -507,6 +456,6 @@ void allocatorSim::set_max_memory_usage(size_t allocated_bytes, size_t reserved_
     max_reserved_bytes = reserved_bytes;
 }
 
-}  // namespace c10
-}  // namespace cuda
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10

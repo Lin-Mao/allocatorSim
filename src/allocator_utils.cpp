@@ -96,6 +96,14 @@ void SimulatorModeController::set_async_tracing(bool async) {
     enable_async_tracing = async;
 }
 
+bool SimulatorModeController::enable_functionality_checking = false;
+bool SimulatorModeController::is_functionality_checking() {
+    return enable_functionality_checking;
+}
+void SimulatorModeController::set_functionality_checking(bool checking) {
+    enable_functionality_checking = checking;
+}
+
 bool SimulatorModeController::enable_profiling = true;
 bool SimulatorModeController::is_profiling() {
     return enable_profiling;

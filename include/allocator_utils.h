@@ -211,6 +211,14 @@ struct SimulatorModeController{
     static void set_async_tracing(bool async);
 
     /*
+    If true, the simulator will check the correctness of the functionality,
+    and do not apply any optimization.
+    */
+    static bool enable_functionality_checking;
+    static bool is_functionality_checking();
+    static void set_functionality_checking(bool checking);
+
+    /*
     It's controlled by torch.cuda.enable_profiling() API
     true, collecting trace and searching configuration
     false, applying optimization 
