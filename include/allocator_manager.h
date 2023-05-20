@@ -83,7 +83,6 @@ typedef enum AllocatorEventType {
 
 // For torch.cuda.enable_profiling()
 void set_profiling_mode(bool mode);
-bool get_profiling_mode();
 
 class allocatorMgr {
 private:
@@ -182,7 +181,11 @@ private:
 
     void collect_trace_async(void* ptr, int64_t size, bool real = false);
 
-    void collect_trace_stale(void* ptr, int64_t size);
+    void collect_trace_opt(void* ptr, int64_t size, bool real = false);
+
+    void collect_trace_opt2(void* ptr, int64_t size, bool real = false);
+
+    void optimize_functionality();
 
     void empty_cache();
     
@@ -211,8 +214,8 @@ public:
 
 };
 
-}  // namespace c10
-}  // namespace cuda
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10
 
 #endif  // ALLOCATOR_MANAGER_H

@@ -4,7 +4,6 @@
 #include <string>
 #include <tuple>
 
-#include "allocator_simulator.h"
 #include "allocator_manager.h"
 
 using trace_type_t = c10::cuda::AllocatorSim::trace_t;

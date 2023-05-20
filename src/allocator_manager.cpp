@@ -13,9 +13,6 @@ namespace cuda {
 namespace AllocatorSim {
 
 namespace {
-    bool enable_sync_collect_trace = false;
-
-    bool is_profiling_mode = false;
 
     bool group_enable_flag = false;
 
@@ -46,18 +43,18 @@ void load_opt_guidance(std::string filename) {
     in >> searched_configs.kMinLargeAlloc;
     in >> searched_configs.kRoundLarge;
 
-    for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
-        in >> allocatorConf::_GROUPS[i];
-    }
+    // for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
+    //     in >> allocatorConf::_GROUPS[i];
+    // }
 
-    if (allocatorConf::_GROUPS[0] < std::numeric_limits<size_t>::max()) {
-        group_enable_flag = true;
-    }
+    // if (allocatorConf::_GROUPS[0] < std::numeric_limits<size_t>::max()) {
+    //     group_enable_flag = true;
+    // }
 
-    std::string line;
-    while (std::getline(in, line)) {
-        unique_hash_trace.emplace(line);
-    }
+    // std::string line;
+    // while (std::getline(in, line)) {
+    //     unique_hash_trace.emplace(line);
+    // }
     in.close();
 
     std::cout << searched_configs.kMinBlockSize << std::endl;
@@ -80,30 +77,26 @@ void dump_opt_guidance(std::string filename) {
     out << searched_configs.kMinLargeAlloc << std::endl;
     out << searched_configs.kRoundLarge << std::endl;
 
-    for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
-        out << allocatorConf::_GROUPS[i] << std::endl;
-    }
+    // for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
+    //     out << allocatorConf::_GROUPS[i] << std::endl;
+    // }
 
-    for (auto stc : static_tensor_callpaths) {
-        out << stc.first << std::endl;
+    // for (auto stc : static_tensor_callpaths) {
+    //     out << stc.first << std::endl;
         
-        // print callpath, size, count for debugging
-        std::cout << "static tensor callpath: " << stc.first
-                     << " size: " << stc.second.first
-                     << " count: " << stc.second.second << std::endl;
-    }
+    //     // print callpath, size, count for debugging
+    //     std::cout << "static tensor callpath: " << stc.first
+    //                  << " size: " << stc.second.first
+    //                  << " count: " << stc.second.second << std::endl;
+    // }
     out.close();
 }
 
 void set_profiling_mode(bool mode) {
-    is_profiling_mode = mode;
+    SimulatorModeController::set_profiling(mode);
     if (!mode) {
         load_opt_guidance(dump_file_name);
     }
-}
-
-bool get_profiling_mode() {
-    return is_profiling_mode;
 }
 
 /********************************************************************************
@@ -119,6 +112,13 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 
     // sanitizer_callbacks_subscribe();
 
+    DumpDebugging::enableDumppingDebugInfo();
+
+    if (!SimulatorModeController::is_profiling() && !SimulatorModeController::is_functionality_checking()) {
+        // load_opt_guidance(dump_file_name);
+        apply_configs(searched_configs);
+    }
+
 }
 
 allocatorMgr::~allocatorMgr() {
@@ -128,7 +128,13 @@ allocatorMgr::~allocatorMgr() {
     
     // sanitizer_callbacks_unsubscribe();
 
-    test_functionality_under_collect_trace_async();
+    if (SimulatorModeController::is_async_tracing() && SimulatorModeController::is_functionality_checking()) {
+        test_functionality_under_collect_trace_async();
+    }
+
+    if (SimulatorModeController::is_profiling() && !SimulatorModeController::is_functionality_checking()) {
+        optimize_functionality();
+    }
 }
 
 void allocatorMgr::test_simulator() {
@@ -195,6 +201,7 @@ void allocatorMgr::allocator_assert(bool expr) {
     } else {
         std::cout << "[allocatorMgr::allocator_assert(bool expr)!!!]" << std::endl;
         report_configs(original_configs, searched_configs);
+        exit(1);
         assert(expr);
     }
 }
@@ -334,7 +341,7 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
 }
 
 void allocatorMgr::process_empty_cache_api() {
-    if (enable_sync_collect_trace) {
+    if (!SimulatorModeController::is_async_tracing()) {
         empty_cache();
     } else {
         // collect emtpy cache event
@@ -364,7 +371,6 @@ void allocatorMgr::test_functionality_under_collect_trace_async() {
     simulate_allocator();
     std::cout << "After functionality check max reserved size: " << get_reserved_bytes() << std::endl;
     std::cout << "After functionality check max allocated size: " << get_allocated_bytes() << std::endl;
-    
 }
 
 // check the functionality of the simulator by synchronously running it
@@ -399,16 +405,50 @@ void allocatorMgr::collect_trace_async(void* ptr, int64_t size, bool real) {
 }
 
 void allocatorMgr::collect_trace(void* ptr, int64_t size, bool real) {
-    if (enable_sync_collect_trace) {
+    if (!SimulatorModeController::is_async_tracing()) {
         collect_trace_sync(ptr, size, real);
     } else {
-        collect_trace_async(ptr, size, real);
+        if (SimulatorModeController::is_functionality_checking()) {
+            collect_trace_sync(ptr, size, real);
+        } else {
+            collect_trace_opt(ptr, size, real);
+        }
     }
 }
 
-void allocatorMgr::collect_trace_stale(void* ptr, int64_t size) {
+void allocatorMgr::optimize_functionality() {
+    if (!_active_blocks.empty()) {
+        for (auto b : _active_blocks) {
+            _block_trace.emplace(b.second.first, std::make_pair(get_global_op_id(), b.second.second));
+            increase_global_op_id();
+        }
+    }
+
+    process_trace();
+    current_reserved_size = simulate_allocator();
+    search_config();
+
+    dump_opt_guidance(dump_file_name);
+}
+
+void allocatorMgr::collect_trace_opt(void* ptr, int64_t size, bool real) {
     if (size > 0) {  // malloc
-        if (get_profiling_mode()) {
+        _active_blocks.emplace(ptr, std::make_pair(get_global_op_id(), size));
+
+    } else {  // free
+        if (real) { // release the block
+            return ;
+        }
+        auto b = _active_blocks.find(ptr);
+        _block_trace.emplace(b->second.first, std::make_pair(get_global_op_id(), b->second.second));
+        _active_blocks.erase(b);
+    }
+    increase_global_op_id();
+}
+
+void allocatorMgr::collect_trace_opt2(void* ptr, int64_t size, bool real) {
+    if (size > 0) {  // malloc
+        if (SimulatorModeController::is_profiling()) {
             auto callpath = get_callpath_hash();
             ptr2callpath.emplace(ptr, callpath);
 
@@ -432,7 +472,7 @@ void allocatorMgr::collect_trace_stale(void* ptr, int64_t size) {
         }
         _active_blocks.emplace(ptr, std::make_pair(get_global_op_id(), size));
     } else {  // free
-        if (get_profiling_mode()) {
+        if (SimulatorModeController::is_profiling()) {
             auto callpath = ptr2callpath.find(ptr);
             if (callpath != ptr2callpath.end()) {
                 auto static_tensor_cp = static_tensor_callpaths.find(callpath->second);
@@ -461,7 +501,7 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
 
 bool allocatorMgr::iter_end(bool begin, size_t active_size) {
     bool result = false;
-    if (get_profiling_mode()) {
+    if (SimulatorModeController::is_profiling()) {
         if (iteration == 0) { // search configs after the first iteration
             process_trace();
             current_reserved_size = simulate_allocator();
@@ -530,7 +570,7 @@ size_t allocatorMgr::simulate_allocator() {
     auto allocated_size = get_allocated_bytes();
 
     log_configs(searched_configs);
-    allocator_assert(reserved_size > allocated_size);
+    allocator_assert(reserved_size >= allocated_size);
     return reserved_size;
 }
 
@@ -750,7 +790,7 @@ std::string allocatorMgr::get_python_states() {
 }
 
 bool allocatorMgr::check_callpath() {
-    if (iteration == 0 && !get_profiling_mode()) {
+    if (iteration == 0 && !SimulatorModeController::is_profiling()) {
         auto callpath_hash = get_callpath_hash();
         auto it = unique_hash_trace.find(callpath_hash);
         if (it != unique_hash_trace.end()) {
@@ -760,6 +800,6 @@ bool allocatorMgr::check_callpath() {
     return false;
 }
 
-}  // namespace c10
-}  // namespace cuda
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10
