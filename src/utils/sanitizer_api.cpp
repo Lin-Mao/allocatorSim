@@ -1,8 +1,10 @@
 #include <allocator_utils.h>
+#include <allocator_profiler.h>
 #include <utils/sanitizer_api.h>
 #include <sanitizer.h>
 #include <iostream>
 #include <fstream>
+#include <functional>
 
 static Sanitizer_SubscriberHandle sanitizer_handle;
 
@@ -34,14 +36,12 @@ void memory_callbacks(
             _active_physical_segments.emplace(data->address, std::make_pair(c10::cuda::AllocatorSim::get_global_op_id(), data->size));
             // std::cout << "Allocated " << data->size << " bytes at " << data->address << std::endl;
 
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-            std::ofstream out1(c10::cuda::AllocatorSim::get_dump_file_path() + "allocator_mem_layout.txt", std::ios::app);
-            out1 << "op_id: " << c10::cuda::AllocatorSim::get_global_op_id() << " malloc: " << data->address << " size: " << data->size << std::endl;
-            for (auto s : _active_physical_segments) {
-                out1 << "[" << s.first << ", " << s.first + s.second.second << ") ";
-            }
-            out1 << std::endl;
-#endif
+            auto layout_info = std::make_tuple(data->address, data->size, _active_physical_segments);
+            c10::cuda::AllocatorSim::DumpDebugging::dumpDebuggingInfo(
+                c10::cuda::AllocatorSim::DumpDebugging::ACTIVE_SEGMENT_LAYOUT,
+                std::bind(&c10::cuda::AllocatorSim::DumpDebugging::dump_segment_layout, false, layout_info)
+            );
+
             break;
         }
         case SANITIZER_CBID_RESOURCE_DEVICE_MEMORY_FREE:
@@ -53,14 +53,12 @@ void memory_callbacks(
             // std::cout << "Freed " << s->second.second << " bytes at " << s->first << std::endl;
             _active_physical_segments.erase(s);
 
-#ifdef DUMP_INFO_TO_FILE_DEBUGGING
-            std::ofstream out(c10::cuda::AllocatorSim::get_dump_file_path() + "allocator_mem_layout.txt", std::ios::app);
-            out << "op_id: " << c10::cuda::AllocatorSim::get_global_op_id() << " free: " << data->address << " size: " << data->size << std::endl;
-            for (auto s : _active_physical_segments) {
-                out << "[" << s.first << ", " << s.first + s.second.second << ") ";
-            }
-            out << std::endl;
-#endif
+            auto layout_info = std::make_tuple(data->address, data->size, _active_physical_segments);
+            c10::cuda::AllocatorSim::DumpDebugging::dumpDebuggingInfo(
+                c10::cuda::AllocatorSim::DumpDebugging::ACTIVE_SEGMENT_LAYOUT,
+                std::bind(&c10::cuda::AllocatorSim::DumpDebugging::dump_segment_layout, false, layout_info)
+            );
+
             break;
         }
         case SANITIZER_CBID_RESOURCE_HOST_MEMORY_ALLOC:

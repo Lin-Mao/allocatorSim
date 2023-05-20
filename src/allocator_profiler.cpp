@@ -1,4 +1,6 @@
 #include "allocator_profiler.h"
+#include <filesystem>
+#include <iostream>
 
 namespace c10 {
 namespace cuda {
@@ -11,6 +13,12 @@ allocatorProf::~allocatorProf() {
     ALLOCATOR_PROF_ENABLE();
 
     std::string path = "./output/";
+
+    // in case the directory is not created
+    if (!std::filesystem::is_directory(path)) {
+        int ret = system(("mkdir -p " + path).c_str());
+        if (ret != 0) {}
+    }
 
     dump_allocator_snapshot_history(path + "snapshot_history.txt");
 
@@ -213,6 +221,125 @@ void allocatorProf::dump_op_type_list(std::string filename) {
     out.close();
 }
 
-}  // namespace c10
-}  // namespace cuda
+namespace DumpDebugging {
+namespace {
+    std::string dump_path = "";
+
+    std::string block_op_history_filename = "block_ops.txt";
+
+    std::string segment_op_history_filename = "segment_ops.txt";
+
+    std::string segment_layout_filename = "segment_layout.txt";
+
+    std::string pools_snapshot_filename = "pools_snapshot.txt";
+
+    std::vector<std::string> filename_list = {
+        block_op_history_filename,
+        segment_op_history_filename,
+        segment_layout_filename,
+        pools_snapshot_filename
+    };
+
+}   // anonymous namespace for variables
+
+inline std::string get_filename_prefix(bool is_simulator) {
+    std::string prefix = dump_path;
+    if (is_simulator) {
+        prefix += "simulator_";
+    } else {
+        prefix += "allocator_";
+    }
+    return prefix;
+}
+
+void flush_files() {
+    for (auto filename : filename_list) {
+        std::ofstream simulator_output(get_filename_prefix(true) + filename);
+        simulator_output.close();
+        std::ofstream allocator_output(get_filename_prefix(false) + filename);
+        allocator_output.close();
+    }
+}
+
+void enableDumppingDebugInfo() {
+    dump_path = "./output/";
+
+    // in case the directory is not created
+    if (!std::filesystem::is_directory(dump_path)) {
+        int ret = system(("mkdir -p " + dump_path).c_str());
+        if (ret != 0) {}
+    }
+
+    flush_files();
+}
+
+void dump_block_malloc_op(bool is_simulator, const block_malloc_op_t& info) {
+    std::ofstream output(get_filename_prefix(is_simulator) + block_op_history_filename, std::ios::app);
+    output << "op_id: " << get_global_op_id() << std::boolalpha
+           << ", alloc: " << std::get<0>(info)
+           << ", split: " << std::get<1>(info)
+           << ", orig_size: " << std::get<2>(info)
+           << ", size: " << std::get<3>(info)
+           << ", alloc_size: " << std::get<4>(info)
+           << ", before_split_size: " << std::get<5>(info)
+           << ", cur_allocated: " << std::get<6>(info)
+           << ", cur_reserved: " << std::get<7>(info)
+           << std::endl;
+    output.close();
+}
+
+void dump_block_free_op(bool is_simulator, const block_free_op_t& info) {
+    std::ofstream output(get_filename_prefix(is_simulator) + block_op_history_filename, std::ios::app);
+    output << "op_id: " << get_global_op_id() << std::boolalpha
+           << ", free: " << !std::get<0>(info)
+           << ", release: " << std::get<0>(info)
+           << ", size: " << std::get<1>(info)
+           << ", cur_allocated: " << std::get<2>(info)
+           << ", cur_reserved: " << std::get<3>(info)
+           << std::endl;
+    output.close();
+}
+
+void dump_segment_op(bool is_simulator, const segment_op_t& info) {
+    std::string op_type;
+    std::get<1>(info) ? op_type = "release" : op_type = "alloc";
+    std::ofstream output(get_filename_prefix(is_simulator) + segment_op_history_filename, std::ios::app);
+    output << "op_id: " << get_global_op_id() << ", " << op_type << ", alloc_size: " << std::get<1>(info) << std::endl;
+    output.close();
+}
+
+void dump_segment_layout(bool is_simulator, const segment_layout_t& info) {
+    std::ofstream output(get_filename_prefix(is_simulator) + segment_layout_filename, std::ios::app);
+    output << "op_id: " << get_global_op_id() 
+           << ", ptr: " << std::get<0>(info)
+           << ", size: " << std::get<1>(info) << std::endl;
+    for (auto i : std::get<2>(info)) {
+        output << "[" << i.first << ", " << i.first + i.second.second << ") ";
+    }
+    output << std::endl;
+    output.close();
+}
+
+void dump_block_pools_snapshot(bool is_simulator, const block_pools_snapshot_t& info) {
+    std::ofstream output(get_filename_prefix(is_simulator) + pools_snapshot_filename, std::ios::app);
+    output << "op_id: " << get_global_op_id() << std::endl;
+    output << "small: ";
+    for (auto b : std::get<0>(info)) {
+        output << b->size << " ";
+    }
+    output << std::endl;
+
+    output << "large: ";
+    for (auto b : std::get<1>(info)) {
+        output << b->size << " ";
+    }
+    output << std::endl;
+    output.close();
+}
+
+
+}  // namespace dumpDebugging
+
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10

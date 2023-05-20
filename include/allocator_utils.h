@@ -14,37 +14,35 @@
 #include <sstream>
 #include <chrono>
 #include <unordered_map>
+#include <tuple>
 
 namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
+/******************************************************************************/
+/******************************* Common Macros ********************************/
+/******************************************************************************/
 #define LIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 1))
 #define UNLIKELY(expr) (__builtin_expect(static_cast<bool>(expr), 0))
 
 #define DUMP_INFO_TO_FILE_DEBUGGING
 
+
+/******************************************************************************/
+/******************************* Common DataType ******************************/
+/******************************************************************************/
 typedef uint64_t op_id_t;
-
-op_id_t get_global_op_id();
-void increase_global_op_id();
-std::string get_dump_file_path();
-
-
-struct Block;
-struct BlockPool;
-struct AllocParams;
-struct Status;
-struct OpInfo;
-struct BlockInfo;
-struct SegmentInfo;
-struct MemoryRange;
-
-typedef bool (*Comparison)(const Block*, const Block*);
 
 // <malloc_op_id, <free_op_id, size>>
 typedef std::map<op_id_t, std::pair<op_id_t, size_t>> trace_t;
 
+struct Block;
+struct BlockPool;
+
+typedef bool (*Comparison)(const Block*, const Block*);
+
+typedef std::set<Block*, Comparison> BlockPoolSet_t;
 struct Block {
     int device; // gpu
     int stream; // allocation stream
@@ -82,6 +80,19 @@ struct Block {
             size(size),
             pool(nullptr),
             ptr(0),
+            allocated(0),
+            prev(nullptr),
+            next(nullptr),
+            event_count(0),
+            gc_count(0) {}
+
+    // constructor for dump_block_pools_snapshot
+    Block(int device, int stream, size_t size, uint64_t ptr)
+        : device(device),
+            stream(stream),
+            size(size),
+            pool(nullptr),
+            ptr(ptr),
             allocated(0),
             prev(nullptr),
             next(nullptr),
@@ -133,125 +144,6 @@ struct AllocParams {
     Block* block;
 };
 
-struct Status {
-    int64_t current = 0;
-    int64_t peak = 0;
-    int64_t allocated = 0;
-    int64_t freed = 0;
-
-    Status() = default;
-
-    Status(int64_t current, int64_t peak, int64_t allocated, int64_t freed)
-        : current(current), peak(peak), allocated(allocated), freed(freed) {}
-
-    Status(const Status& other)
-        : Status(other.current, other.peak, other.allocated, other.freed) {}
-};
-
-struct OpInfo {
-    uint64_t op_id;
-    bool is_alloc;  // true: segment alloc, false: block alloc
-    bool is_free;
-    bool is_release;
-    bool is_split;
-
-    size_t allocated_size;
-    size_t max_allocated_size;
-    size_t reserved_size;
-    size_t max_reserved_size;
-
-    float utilization_ratio;
-    float fragmentation;
-
-    OpInfo() = default;
-
-    OpInfo(
-        uint64_t op_id,
-        bool is_alloc,
-        bool is_free,
-        bool is_release,
-        bool is_split,
-        size_t allocated_size,
-        size_t max_allocated_size,
-        size_t reserved_size,
-        size_t max_reserved_size)
-        : 
-        op_id(op_id),
-        is_alloc(is_alloc),
-        is_free(is_free),
-        is_release(is_release),
-        is_split(is_split),
-        allocated_size(allocated_size),
-        max_allocated_size(max_allocated_size),
-        reserved_size(reserved_size),
-        max_reserved_size(max_reserved_size),
-        utilization_ratio(((float)allocated_size) / reserved_size),
-        fragmentation(0){}
-};
-
-
-struct BlockInfo {
-    size_t size;
-    uint64_t address;
-    bool allocated;
-
-    BlockInfo() = default;
-
-    BlockInfo(size_t size, uint64_t address, bool allocated)
-                : size(size), address(address), allocated(allocated) {}
-};
-
-struct SegmentInfo {
-    uint64_t op_id;
-    uint64_t address;
-    size_t total_size;
-    Block* first_block;
-
-    size_t allocated_size;
-    size_t largest_freed_size;  // for fragmentation
-    size_t num_blocks;
-    size_t num_allocated_blocks;
-
-    float fragmentation;
-
-    std::vector<size_t> empty_range;
-
-
-    SegmentInfo() = default;
-
-    SegmentInfo(
-        uint64_t op_id,
-        uint64_t address,
-        size_t total_size,
-        Block* first_block)
-        :
-        op_id(op_id),
-        address(address),
-        total_size(total_size),
-        first_block(first_block),
-        allocated_size(0),
-        largest_freed_size(0),
-        num_blocks(0),
-        num_allocated_blocks(0),
-        fragmentation(0) { empty_range = std::vector<size_t>(); }
-
-    SegmentInfo(const SegmentInfo& other)
-        : op_id(other.op_id),
-        address(other.address),
-        total_size(other.total_size),
-        first_block(other.first_block),
-        allocated_size(other.allocated_size),
-        largest_freed_size(other.largest_freed_size),
-        num_blocks(other.num_blocks),
-        num_allocated_blocks(other.num_allocated_blocks),
-        fragmentation(other.fragmentation),
-        empty_range(other.empty_range) {}
-
-
-    bool operator<(const SegmentInfo& other) const {
-        return this->op_id < other.op_id;
-    }
-};
 
 struct MemoryRange {
     size_t start;
@@ -266,10 +158,25 @@ struct MemoryRange {
     }
 };
 
+
+/******************************************************************************/
+/****************************** Common Functions ******************************/
+/******************************************************************************/
+// format size to human readable string
+std::string format_size(size_t size);
+
+// get and increase global op_id
+op_id_t get_global_op_id();
+void increase_global_op_id();
+
+
+/******************************************************************************/
+/****************************** Allocator Timer *******************************/
+/******************************************************************************/
 #define TIMER_NUMS 10
 using sys_clock = std::chrono::time_point<std::chrono::system_clock>;
 
-class allocatorTimer {
+struct allocatorTimer {
 private:
     static std::array<size_t, TIMER_NUMS> timers;
     static std::array<std::string, TIMER_NUMS> timer_names;
@@ -283,10 +190,75 @@ public:
     static void print_timer(int index);
 };
 
-std::string format_size(size_t size);
 
-}  // namespace c10
-}  // namespace cuda
+/******************************************************************************/
+/************************** SimulatorModeController ***************************/
+/******************************************************************************/
+// the following struct is used to control the simulator mode
+struct SimulatorModeController{
+    /*
+    init the an arrangement of control flags
+    */
+   static void init();
+
+    /*
+    control the way to collect trace
+    true: async, optimization and tracing is in this mode
+    false: sync (only for correctness checking)
+    */
+    static bool enable_async_tracing;
+    static bool is_async_tracing();
+    static void set_async_tracing(bool async);
+
+    /*
+    It's controlled by torch.cuda.enable_profiling() API
+    true, collecting trace and searching configuration
+    false, applying optimization 
+    */
+    static bool enable_profiling;
+    static bool is_profiling();
+    static void set_profiling(bool profiling);
+
+    /*
+    control dumping trace to file for simulation and allocator
+    */
+    static bool enable_debug_dumpping;
+    static bool is_debug_dumpping();
+    static void set_debug_dumpping(bool dumpping);
+
+    /*
+    Separate dumping pool snapshot because of reducing overhead
+    */
+    static bool enable_debug_poolinfo_dumpping;
+    static bool is_debug_poolinfo_dumpping();
+    static void set_debug_poolinfo_dumpping(bool dumpping);
+
+    /*
+    control dumping trace to file
+    Only enable when dumpping trace to file for exploring reinforcement learning
+    */
+    static bool enable_trace_dumpping;
+    static bool is_trace_dumpping();
+    static void set_trace_dumpping(bool dumpping);
+
+    /*
+    enable config searching
+    */
+    static bool enable_config_optimization;
+    static bool is_config_optimization();
+    static void set_config_optimization(bool optimization);
+
+    /*
+    enable group optimization
+    */
+    static bool enable_group_optimization;
+    static bool is_group_optimization();
+    static void set_group_optimization(bool optimization);
+};
+
+
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10
 
 #endif // ALLOCATOR_UTILS_H

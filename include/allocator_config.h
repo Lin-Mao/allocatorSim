@@ -94,8 +94,8 @@ public:
 
 };
 
-}  // namespace c10
-}  // namespace cuda
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10
 
 #endif // ALLOCATOR_CONFIG_H

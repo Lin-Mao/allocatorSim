@@ -143,6 +143,6 @@ void allocatorConf::set_memory_segment_address_interval(uint64_t interval) {
     m_memory_segment_address_interval = interval;
 }
 
-}  // namespace c10
-}  // namespace cuda
 }  // namespace AllocatorSim
+}  // namespace cuda
+}  // namespace c10
