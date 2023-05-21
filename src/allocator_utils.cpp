@@ -125,24 +125,35 @@ void set_sim_control_mode(SimControlMode_t mode, bool enable) {
         disable_controller_init = true;
     }
 
-    if (mode == ASYNC_TRACING) {
+    switch (mode)
+    {
+    case ASYNC_TRACING:
         SimulatorModeController::set_async_tracing(enable);
-    } else if (mode == FUNCTIONALITY_CHECKING) {
+        break;
+    case FUNCTIONALITY_CHECKING:
         SimulatorModeController::set_functionality_checking(enable);
-    } else if (mode == PROFILING) {
+        break;
+    case PROFILING:
         SimulatorModeController::set_profiling(enable);
-    } else if (mode == DEBUG_DUMPPING) {
+        break;
+    case DEBUG_DUMPPING:
         SimulatorModeController::set_debug_dumpping(enable);
-    } else if (mode == DEBUG_POOLINFO_DUMPPING) {
+        break;
+    case DEBUG_POOLINFO_DUMPPING:
         SimulatorModeController::set_debug_poolinfo_dumpping(enable);
-    } else if (mode == TRACE_DUMPPING) {
+        break;
+    case TRACE_DUMPPING:    
         SimulatorModeController::set_trace_dumpping(enable);
-    } else if (mode == CONFIG_OPTIMIZATION) {
+        break;
+    case CONFIG_OPTIMIZATION:
         SimulatorModeController::set_config_optimization(enable);
-    } else if (mode == GROUP_OPTIMIZATION) {
+        break;
+    case GROUP_OPTIMIZATION:
         SimulatorModeController::set_group_optimization(enable);
-    } else {
-        std::cout << "SimulatorModeController: Unknown mode: " << mode << std::endl;
+        break;
+    default:
+        std::cout << "SimulatorModeController: Unknown mode" << std::endl;
+        break;
     }
 
     print_sim_mode_controller(mode, enable);
