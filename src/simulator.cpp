@@ -85,9 +85,19 @@ void run_allocator(const trace_type& malloc_map, const trace_type& free_map, uin
     alloc_mgr.test_simulator();
 }
 
-int main() {
-    // trace format(each line): start_op_id end_op_id tensor_size
-    std::string trace_file = "./input/alexnet_train.log";
+int main(int argc, char** argv) {
+    if (argc != 3) {
+        std::cout << "Usage: ./bin/allocatorsim <trace_file> <allocator_config_file>" << std::endl;
+        return 0;
+    }
+
+    // // trace format(each line): start_op_id end_op_id tensor_size
+    // std::string trace_file = "./input/alexnet_train.log";
+    // std::string config_file = "./input/allocator_config.json";
+
+    std::string trace_file = argv[1];
+    std::string config_file = argv[2];
+
     trace_type_t input_block_map;
     trace_type malloc_map;
     trace_type free_map;

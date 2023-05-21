@@ -194,6 +194,21 @@ public:
 /******************************************************************************/
 /************************** SimulatorModeController ***************************/
 /******************************************************************************/
+namespace sim_control{
+typedef enum SimControlMode{
+    ASYNC_TRACING = 0,
+    FUNCTIONALITY_CHECKING = 1,
+    PROFILING = 2,
+    DEBUG_DUMPPING = 3,
+    DEBUG_POOLINFO_DUMPPING = 4,
+    TRACE_DUMPPING = 5,
+    CONFIG_OPTIMIZATION = 6,
+    GROUP_OPTIMIZATION = 7,
+    NUMS_OF_SIM_CONTROL_MODE = 8
+}SimControlMode_t;
+
+void set_sim_control_mode(SimControlMode_t mode, bool enable);
+
 // the following struct is used to control the simulator mode
 struct SimulatorModeController{
     /*
@@ -264,6 +279,7 @@ struct SimulatorModeController{
     static void set_group_optimization(bool optimization);
 };
 
+}  // namespace sim_control
 
 }  // namespace AllocatorSim
 }  // namespace cuda

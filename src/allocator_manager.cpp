@@ -93,7 +93,7 @@ void dump_opt_guidance(std::string filename) {
 }
 
 void set_profiling_mode(bool mode) {
-    SimulatorModeController::set_profiling(mode);
+    sim_control::SimulatorModeController::set_profiling(mode);
     if (!mode) {
         load_opt_guidance(dump_file_name);
     }
@@ -112,13 +112,14 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 
     // sanitizer_callbacks_subscribe();
 
+    sim_control::SimulatorModeController::init();
+
     DumpDebugging::enableDumppingDebugInfo();
 
-    if (!SimulatorModeController::is_profiling() && !SimulatorModeController::is_functionality_checking()) {
+    if (!sim_control::SimulatorModeController::is_profiling() && !sim_control::SimulatorModeController::is_functionality_checking()) {
         // load_opt_guidance(dump_file_name);
         apply_configs(searched_configs);
     }
-
 }
 
 allocatorMgr::~allocatorMgr() {
@@ -128,11 +129,11 @@ allocatorMgr::~allocatorMgr() {
     
     // sanitizer_callbacks_unsubscribe();
 
-    if (SimulatorModeController::is_async_tracing() && SimulatorModeController::is_functionality_checking()) {
+    if (sim_control::SimulatorModeController::is_async_tracing() && sim_control::SimulatorModeController::is_functionality_checking()) {
         test_functionality_under_collect_trace_async();
     }
 
-    if (SimulatorModeController::is_profiling() && !SimulatorModeController::is_functionality_checking()) {
+    if (sim_control::SimulatorModeController::is_profiling() && !sim_control::SimulatorModeController::is_functionality_checking()) {
         optimize_functionality();
     }
 }
@@ -341,7 +342,7 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
 }
 
 void allocatorMgr::process_empty_cache_api() {
-    if (!SimulatorModeController::is_async_tracing()) {
+    if (!sim_control::SimulatorModeController::is_async_tracing()) {
         empty_cache();
     } else {
         // collect emtpy cache event
@@ -405,10 +406,10 @@ void allocatorMgr::collect_trace_async(void* ptr, int64_t size, bool real) {
 }
 
 void allocatorMgr::collect_trace(void* ptr, int64_t size, bool real) {
-    if (!SimulatorModeController::is_async_tracing()) {
+    if (!sim_control::SimulatorModeController::is_async_tracing()) {
         collect_trace_sync(ptr, size, real);
     } else {
-        if (SimulatorModeController::is_functionality_checking()) {
+        if (sim_control::SimulatorModeController::is_functionality_checking()) {
             collect_trace_sync(ptr, size, real);
         } else {
             collect_trace_opt(ptr, size, real);
@@ -448,7 +449,7 @@ void allocatorMgr::collect_trace_opt(void* ptr, int64_t size, bool real) {
 
 void allocatorMgr::collect_trace_opt2(void* ptr, int64_t size, bool real) {
     if (size > 0) {  // malloc
-        if (SimulatorModeController::is_profiling()) {
+        if (sim_control::SimulatorModeController::is_profiling()) {
             auto callpath = get_callpath_hash();
             ptr2callpath.emplace(ptr, callpath);
 
@@ -472,7 +473,7 @@ void allocatorMgr::collect_trace_opt2(void* ptr, int64_t size, bool real) {
         }
         _active_blocks.emplace(ptr, std::make_pair(get_global_op_id(), size));
     } else {  // free
-        if (SimulatorModeController::is_profiling()) {
+        if (sim_control::SimulatorModeController::is_profiling()) {
             auto callpath = ptr2callpath.find(ptr);
             if (callpath != ptr2callpath.end()) {
                 auto static_tensor_cp = static_tensor_callpaths.find(callpath->second);
@@ -501,7 +502,7 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
 
 bool allocatorMgr::iter_end(bool begin, size_t active_size) {
     bool result = false;
-    if (SimulatorModeController::is_profiling()) {
+    if (sim_control::SimulatorModeController::is_profiling()) {
         if (iteration == 0) { // search configs after the first iteration
             process_trace();
             current_reserved_size = simulate_allocator();
@@ -790,7 +791,7 @@ std::string allocatorMgr::get_python_states() {
 }
 
 bool allocatorMgr::check_callpath() {
-    if (iteration == 0 && !SimulatorModeController::is_profiling()) {
+    if (iteration == 0 && !sim_control::SimulatorModeController::is_profiling()) {
         auto callpath_hash = get_callpath_hash();
         auto it = unique_hash_trace.find(callpath_hash);
         if (it != unique_hash_trace.end()) {

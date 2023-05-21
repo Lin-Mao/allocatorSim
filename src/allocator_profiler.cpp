@@ -6,6 +6,10 @@ namespace c10 {
 namespace cuda {
 namespace AllocatorSim {
 
+/******************************************************************************/
+/***************************** Allocator Profiler *****************************/
+/******************************************************************************/
+
 allocatorProf::allocatorProf() {
 }
 
@@ -221,6 +225,10 @@ void allocatorProf::dump_op_type_list(std::string filename) {
     out.close();
 }
 
+
+/******************************************************************************/
+/******************************** DumpDebugging *******************************/
+/******************************************************************************/
 namespace DumpDebugging {
 namespace {
     std::string dump_path = "";
@@ -262,6 +270,9 @@ void flush_files() {
 }
 
 void enableDumppingDebugInfo() {
+    if (!sim_control::SimulatorModeController::is_debug_poolinfo_dumpping()) {
+        return;
+    }
     dump_path = "./output/";
 
     // in case the directory is not created

@@ -252,7 +252,7 @@ void dump_block_pools_snapshot(bool is_simulator, const block_pools_snapshot_t& 
 
 template<typename F>
 void dumpDebuggingInfo(DebuggingInfoType_t type, F fn) {
-    if (SimulatorModeController::is_debug_dumpping()) {
+    if (sim_control::SimulatorModeController::is_debug_dumpping()) {
         if (type == BLOCK_MALLOC_OP_HISTORY) {
             fn();
         } else if (type == BLOCK_FREE_OP_HISTORY) {

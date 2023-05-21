@@ -79,10 +79,84 @@ void allocatorTimer::print_timer(int index) {
 /******************************************************************************/
 /************************** SimulatorModeController ***************************/
 /******************************************************************************/
+namespace sim_control{
+
+bool disable_controller_init = false;
+
+void print_sim_mode_controller(SimControlMode_t mode, bool enable) {
+    std::string mode_name;
+    switch (mode)
+    {
+    case ASYNC_TRACING:
+        mode_name = "ASYNC_TRACING";
+        break;
+    case FUNCTIONALITY_CHECKING:
+        mode_name = "FUNCTIONALITY_CHECKING";
+        break;
+    case PROFILING:
+        mode_name = "PROFILING";
+        break;
+    case DEBUG_DUMPPING:
+        mode_name = "DEBUG_DUMPPING";
+        break;
+    case DEBUG_POOLINFO_DUMPPING:
+        mode_name = "DEBUG_POOLINFO_DUMPPING";
+        break;
+    case TRACE_DUMPPING:
+        mode_name = "TRACE_DUMPPING";
+        break;
+    case CONFIG_OPTIMIZATION:
+        mode_name = "CONFIG_OPTIMIZATION";
+        break;
+    case GROUP_OPTIMIZATION:
+        mode_name = "GROUP_OPTIMIZATION";
+        break;
+    default:
+        mode_name = "Unknown mode";
+        break;
+    }
+
+    std::cout << "SimulatorModeController: " << mode_name << " is " << (enable ? "enabled" : "disabled") << std::endl;
+}
+
+void set_sim_control_mode(SimControlMode_t mode, bool enable) {
+    if (disable_controller_init) {
+        SimulatorModeController::init();
+        disable_controller_init = true;
+    }
+
+    if (mode == ASYNC_TRACING) {
+        SimulatorModeController::set_async_tracing(enable);
+    } else if (mode == FUNCTIONALITY_CHECKING) {
+        SimulatorModeController::set_functionality_checking(enable);
+    } else if (mode == PROFILING) {
+        SimulatorModeController::set_profiling(enable);
+    } else if (mode == DEBUG_DUMPPING) {
+        SimulatorModeController::set_debug_dumpping(enable);
+    } else if (mode == DEBUG_POOLINFO_DUMPPING) {
+        SimulatorModeController::set_debug_poolinfo_dumpping(enable);
+    } else if (mode == TRACE_DUMPPING) {
+        SimulatorModeController::set_trace_dumpping(enable);
+    } else if (mode == CONFIG_OPTIMIZATION) {
+        SimulatorModeController::set_config_optimization(enable);
+    } else if (mode == GROUP_OPTIMIZATION) {
+        SimulatorModeController::set_group_optimization(enable);
+    } else {
+        std::cout << "SimulatorModeController: Unknown mode: " << mode << std::endl;
+    }
+
+    print_sim_mode_controller(mode, enable);
+}
+
 void SimulatorModeController::init() {
+    if (disable_controller_init) {
+        return;
+    }
     enable_async_tracing = true;
+    enable_functionality_checking = true;
     enable_profiling = true;
     enable_debug_dumpping = false;
+    enable_debug_poolinfo_dumpping = false;
     enable_trace_dumpping = false;
     enable_config_optimization = true;
     enable_group_optimization = false;
@@ -152,6 +226,8 @@ bool SimulatorModeController::is_group_optimization() {
 void SimulatorModeController::set_group_optimization(bool optimization) {
     enable_group_optimization = optimization;
 }
+
+}  // namespace sim_control
 
 }  // namespace AllocatorSim
 }  // namespace cuda
