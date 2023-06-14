@@ -164,7 +164,7 @@ void SimulatorModeController::init() {
         return;
     }
     enable_async_tracing = true;
-    enable_functionality_checking = true;
+    enable_functionality_checking = false;
     enable_profiling = true;
     enable_debug_dumpping = false;
     enable_debug_poolinfo_dumpping = false;

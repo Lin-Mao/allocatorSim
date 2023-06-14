@@ -154,7 +154,7 @@ private:
 
     void group_blocks(const float& difference);
 
-    bool iter_end(bool begin, size_t active_size);
+    bool iter_end();
 
     std::string get_callpath_hash();
     
@@ -202,7 +202,7 @@ public:
 
     void collect_api(AllocatorEventType_t api_type);
 
-    bool iteration_trigger(bool begin = true, size_t size = 0);
+    bool iteration_trigger(bool begin = true);
 
     char* malloc_cpu_memory_chunk(size_t size);
 

@@ -43,18 +43,20 @@ void load_opt_guidance(std::string filename) {
     in >> searched_configs.kMinLargeAlloc;
     in >> searched_configs.kRoundLarge;
 
-    // for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
-    //     in >> allocatorConf::_GROUPS[i];
-    // }
+    if (sim_control::SimulatorModeController::is_group_optimization()) {
+        for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
+            in >> allocatorConf::_GROUPS[i];
+        }
 
-    // if (allocatorConf::_GROUPS[0] < std::numeric_limits<size_t>::max()) {
-    //     group_enable_flag = true;
-    // }
+        if (allocatorConf::_GROUPS[0] < std::numeric_limits<size_t>::max()) {
+            group_enable_flag = true;
+        }
+    }
 
-    // std::string line;
-    // while (std::getline(in, line)) {
-    //     unique_hash_trace.emplace(line);
-    // }
+    std::string line;
+    while (std::getline(in, line)) {
+        unique_hash_trace.emplace(line);
+    }
     in.close();
 
     std::cout << searched_configs.kMinBlockSize << std::endl;
@@ -77,18 +79,20 @@ void dump_opt_guidance(std::string filename) {
     out << searched_configs.kMinLargeAlloc << std::endl;
     out << searched_configs.kRoundLarge << std::endl;
 
-    // for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
-    //     out << allocatorConf::_GROUPS[i] << std::endl;
-    // }
+    if (sim_control::SimulatorModeController::is_group_optimization()) {
+        for (size_t i = 0; i < allocatorConf::_GROUPS.size(); i++) {
+            out << allocatorConf::_GROUPS[i] << std::endl;
+        }
+    }
 
-    // for (auto stc : static_tensor_callpaths) {
-    //     out << stc.first << std::endl;
+    for (auto stc : static_tensor_callpaths) {
+        out << stc.first << std::endl;
         
-    //     // print callpath, size, count for debugging
-    //     std::cout << "static tensor callpath: " << stc.first
-    //                  << " size: " << stc.second.first
-    //                  << " count: " << stc.second.second << std::endl;
-    // }
+        // print callpath, size, count for debugging
+        std::cout << "static tensor callpath: " << stc.first
+                     << " size: " << stc.second.first
+                     << " count: " << stc.second.second << std::endl;
+    }
     out.close();
 }
 
@@ -133,7 +137,8 @@ allocatorMgr::~allocatorMgr() {
         test_functionality_under_collect_trace_async();
     }
 
-    if (sim_control::SimulatorModeController::is_profiling() && !sim_control::SimulatorModeController::is_functionality_checking()) {
+    if (sim_control::SimulatorModeController::is_profiling() && sim_control::SimulatorModeController::is_functionality_checking()) {
+        // may not used, mark it as deprecated
         optimize_functionality();
     }
 }
@@ -410,7 +415,7 @@ void allocatorMgr::collect_trace(void* ptr, int64_t size, bool real) {
         collect_trace_sync(ptr, size, real);
     } else {
         if (sim_control::SimulatorModeController::is_functionality_checking()) {
-            collect_trace_sync(ptr, size, real);
+            collect_trace_async(ptr, size, real);
         } else {
             collect_trace_opt(ptr, size, real);
         }
@@ -454,6 +459,7 @@ void allocatorMgr::collect_trace_opt2(void* ptr, int64_t size, bool real) {
             ptr2callpath.emplace(ptr, callpath);
 
             // static tensor analysis
+            // static tensors is the tensors that are at first iteration and never reclaimed in the later iterations
             if (reclaimed_callpaths.find(callpath) == reclaimed_callpaths.end()) {
                 auto static_tensor_cp = static_tensor_callpaths.find(callpath);
                 if (iteration == 0) {
@@ -473,6 +479,9 @@ void allocatorMgr::collect_trace_opt2(void* ptr, int64_t size, bool real) {
         }
         _active_blocks.emplace(ptr, std::make_pair(get_global_op_id(), size));
     } else {  // free
+        if (real) {
+            return ; // do nothing for real free, handled by empty_cache
+        }
         if (sim_control::SimulatorModeController::is_profiling()) {
             auto callpath = ptr2callpath.find(ptr);
             if (callpath != ptr2callpath.end()) {
@@ -500,23 +509,25 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
     free((void*)pointer);
 }
 
-bool allocatorMgr::iter_end(bool begin, size_t active_size) {
-    bool result = false;
+bool allocatorMgr::iter_end() {
+    bool result = false;    // indicates whether applying a online optimization
     if (sim_control::SimulatorModeController::is_profiling()) {
-        if (iteration == 0) { // search configs after the first iteration
+        size_t max_monitored_iterations = 2;
+        // search configs when reaching the max monitored iterations
+        if (iteration == max_monitored_iterations) {
             process_trace();
             current_reserved_size = simulate_allocator();
-            search_config_with_group();
-        }
-
-        size_t max_monitored_iterations = 2;
-        if (iteration == max_monitored_iterations) {
+            if (sim_control::SimulatorModeController::is_config_optimization()) {
+                search_config();
+            } else if (sim_control::SimulatorModeController::is_group_optimization()) {
+                search_config_with_group();
+            }
             // dump configs
             dump_opt_guidance(dump_file_name);
         }
     }
     else {
-        if (false) { // change to optimize at beginning, always false for now
+        if (false) { // change to optimize at program beginning, always false for now
             process_trace();
             current_reserved_size = simulate_allocator();
             // search_config();
@@ -532,12 +543,12 @@ bool allocatorMgr::iter_end(bool begin, size_t active_size) {
     return result;
 }
 
-bool allocatorMgr::iteration_trigger(bool begin, size_t active_size) {
+bool allocatorMgr::iteration_trigger(bool begin) {
     size_t result = false;
     if (begin) {
         // do something
     } else {
-        result = iter_end(begin, active_size);
+        result = iter_end();
     }
     return result;
 }
