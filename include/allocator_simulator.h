@@ -149,7 +149,7 @@ public:
 
     size_t get_max_allocated_bytes();
 
-    void set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes);
+    void reset_memory_usage();
 
     void set_group_enable_flag_sim(bool flag);
 

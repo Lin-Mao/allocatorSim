@@ -128,32 +128,58 @@ void set_sim_control_mode(SimControlMode_t mode, bool enable) {
     switch (mode)
     {
     case ASYNC_TRACING:
-        SimulatorModeController::set_async_tracing(enable);
-        break;
+        {
+            std::cout << "Set enable_async_tracing to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_async_tracing(enable);
+            break;
+        }
     case FUNCTIONALITY_CHECKING:
-        SimulatorModeController::set_functionality_checking(enable);
-        break;
+        {
+            std::cout << "Set enable_functionality_checking to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_functionality_checking(enable);
+            break;
+        }
     case PROFILING:
-        SimulatorModeController::set_profiling(enable);
-        break;
+        {
+            std::cout << "Set enable_profiling to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_profiling(enable);
+            break;
+        }
     case DEBUG_DUMPPING:
-        SimulatorModeController::set_debug_dumpping(enable);
-        break;
+        {
+            std::cout << "Set enable_debug_dumpping to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_debug_dumpping(enable);
+            break;
+        }
     case DEBUG_POOLINFO_DUMPPING:
-        SimulatorModeController::set_debug_poolinfo_dumpping(enable);
-        break;
+        {
+            std::cout << "Set enable_debug_poolinfo_dumpping to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_debug_poolinfo_dumpping(enable);
+            break;
+        }
     case TRACE_DUMPPING:    
-        SimulatorModeController::set_trace_dumpping(enable);
-        break;
+        {
+            std::cout << "Set enable_trace_dumpping to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_trace_dumpping(enable);
+            break;
+        }
     case CONFIG_OPTIMIZATION:
-        SimulatorModeController::set_config_optimization(enable);
-        break;
+        {
+            std::cout << "Set enable_config_optimization to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_config_optimization(enable);
+            break;
+        }
     case GROUP_OPTIMIZATION:
-        SimulatorModeController::set_group_optimization(enable);
-        break;
+        {
+            std::cout << "Set enable_group_optimization to " << std::boolalpha << enable << std::endl;
+            SimulatorModeController::set_group_optimization(enable);
+            break;
+        }
     default:
-        std::cout << "SimulatorModeController: Unknown mode" << std::endl;
-        break;
+        {
+            std::cout << "SimulatorModeController: Unknown mode" << std::endl;
+            break;
+        }
     }
 
     print_sim_mode_controller(mode, enable);
@@ -166,6 +192,7 @@ void SimulatorModeController::init() {
     enable_async_tracing = true;
     enable_functionality_checking = false;
     enable_profiling = true;
+    enable_static_tensor_analysis = false;
     enable_debug_dumpping = false;
     enable_debug_poolinfo_dumpping = false;
     enable_trace_dumpping = false;
@@ -195,6 +222,14 @@ bool SimulatorModeController::is_profiling() {
 }
 void SimulatorModeController::set_profiling(bool profiling) {
     enable_profiling = profiling;
+}
+
+bool SimulatorModeController::enable_static_tensor_analysis = false;
+bool SimulatorModeController::is_static_tensor_analysis() {
+    return enable_static_tensor_analysis;
+}
+void SimulatorModeController::set_static_tensor_analysis(bool analysis) {
+    enable_static_tensor_analysis = analysis;
 }
 
 // Use macro DUMP_INFO_TO_FILE_DEBUGGING for now

@@ -128,8 +128,8 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 
 allocatorMgr::~allocatorMgr() {
     std::cout << "Simulator destructor called" << std::endl;
-    std::cout << "Simulator max reserved size: " << get_reserved_bytes() << std::endl;
-    std::cout << "Simulator max allocated size: " << get_allocated_bytes() << std::endl;
+    std::cout << "Simulator max reserved size: " << get_max_reserved_bytes() << std::endl;
+    std::cout << "Simulator max allocated size: " << get_max_allocated_bytes() << std::endl;
     
     // sanitizer_callbacks_unsubscribe();
 
@@ -331,8 +331,8 @@ void allocatorMgr::log_configs(Configs& configs, bool get_mem) {
     size_t reserved_size = 0;
     size_t allocated_size = 0;
     if (get_mem) {
-        reserved_size = get_reserved_bytes();
-        allocated_size = get_allocated_bytes();
+        reserved_size = get_max_reserved_bytes();
+        allocated_size = get_max_allocated_bytes();
     }
     configs = Configs(
         allocatorConf::get_kMinBlockSize(),
@@ -371,12 +371,12 @@ void allocatorMgr::test_functionality_under_collect_trace_async() {
         }
     }
 
-    std::cout << "Before functionality check max reserved size: " << get_reserved_bytes() << std::endl;
-    std::cout << "Before functionality check max allocated size: " << get_allocated_bytes() << std::endl;
+    std::cout << "Before functionality check max reserved size: " << get_max_reserved_bytes() << std::endl;
+    std::cout << "Before functionality check max allocated size: " << get_max_allocated_bytes() << std::endl;
     process_trace();
     simulate_allocator();
-    std::cout << "After functionality check max reserved size: " << get_reserved_bytes() << std::endl;
-    std::cout << "After functionality check max allocated size: " << get_allocated_bytes() << std::endl;
+    std::cout << "After functionality check max reserved size: " << get_max_reserved_bytes() << std::endl;
+    std::cout << "After functionality check max allocated size: " << get_max_allocated_bytes() << std::endl;
 }
 
 // check the functionality of the simulator by synchronously running it
@@ -417,7 +417,7 @@ void allocatorMgr::collect_trace(void* ptr, int64_t size, bool real) {
         if (sim_control::SimulatorModeController::is_functionality_checking()) {
             collect_trace_async(ptr, size, real);
         } else {
-            collect_trace_opt(ptr, size, real);
+            collect_trace_opt2(ptr, size, real);
         }
     }
 }
@@ -452,6 +452,7 @@ void allocatorMgr::collect_trace_opt(void* ptr, int64_t size, bool real) {
     increase_global_op_id();
 }
 
+// @Lin-Mao(todo): a issue to be investigated: the gap of dynamic tensors simulation even larger than the original one
 void allocatorMgr::collect_trace_opt2(void* ptr, int64_t size, bool real) {
     if (size > 0) {  // malloc
         if (sim_control::SimulatorModeController::is_profiling()) {
@@ -517,6 +518,7 @@ bool allocatorMgr::iter_end() {
         if (iteration == max_monitored_iterations) {
             process_trace();
             current_reserved_size = simulate_allocator();
+            std::cout << "init_reserved_size: " << current_reserved_size << std::endl;
             if (sim_control::SimulatorModeController::is_config_optimization()) {
                 search_config();
             } else if (sim_control::SimulatorModeController::is_group_optimization()) {
@@ -538,7 +540,8 @@ bool allocatorMgr::iter_end() {
         }
     }
 
-    _block_trace.clear();
+    // ?: continuous profiling should clear trace after each iteration
+    // _block_trace.clear();
     iteration++;
     return result;
 }
@@ -554,6 +557,15 @@ bool allocatorMgr::iteration_trigger(bool begin) {
 }
 
 void allocatorMgr::process_trace() {
+    // determine if process the active blocks
+    if (!sim_control::SimulatorModeController::is_static_tensor_analysis()) {
+        if (!_active_blocks.empty()) {
+            for (auto b : _active_blocks) {
+                _block_trace.emplace(b.second.first, std::make_pair(get_global_op_id(), b.second.second));
+            }
+            increase_global_op_id();
+        }
+    }
     for (auto t : _block_trace) {
         opid2event.emplace(t.first, ALLOCATOR_MALLOC_BLOCK);
         opid2event.emplace(t.second.first, ALLOCATOR_FREE_BLOCK);
@@ -578,8 +590,8 @@ size_t allocatorMgr::simulate_allocator() {
     }
     free_blocks.clear();
 
-    auto reserved_size = get_reserved_bytes();
-    auto allocated_size = get_allocated_bytes();
+    auto reserved_size = get_max_reserved_bytes();
+    auto allocated_size = get_max_allocated_bytes();
 
     log_configs(searched_configs);
     allocator_assert(reserved_size >= allocated_size);
@@ -662,16 +674,16 @@ std::pair<size_t, size_t> allocatorMgr::get_allocator_memory_usage() {
     return alloc_sim.get_max_memory_usage();
 }
 
-size_t allocatorMgr::get_reserved_bytes() {
+size_t allocatorMgr::get_max_reserved_bytes() {
     return alloc_sim.get_max_reserved_bytes();
 }
 
-size_t allocatorMgr::get_allocated_bytes() {
+size_t allocatorMgr::get_max_allocated_bytes() {
     return alloc_sim.get_max_allocated_bytes();
 }
 
 void allocatorMgr::reset_allocator_memory_usage() {
-    alloc_sim.set_max_memory_usage(0, 0);
+    alloc_sim.reset_memory_usage();
 }
 
 void allocatorMgr::show_allocator_memory_usage() {

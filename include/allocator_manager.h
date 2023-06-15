@@ -160,9 +160,9 @@ private:
     
     std::string get_python_states();
 
-    size_t get_reserved_bytes();
+    size_t get_max_reserved_bytes();
 
-    size_t get_allocated_bytes();
+    size_t get_max_allocated_bytes();
 
     std::pair<size_t, size_t> get_allocator_memory_usage();
 

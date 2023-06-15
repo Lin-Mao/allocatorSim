@@ -199,12 +199,13 @@ typedef enum SimControlMode{
     ASYNC_TRACING = 0,
     FUNCTIONALITY_CHECKING = 1,
     PROFILING = 2,
-    DEBUG_DUMPPING = 3,
-    DEBUG_POOLINFO_DUMPPING = 4,
-    TRACE_DUMPPING = 5,
-    CONFIG_OPTIMIZATION = 6,
-    GROUP_OPTIMIZATION = 7,
-    NUMS_OF_SIM_CONTROL_MODE = 8
+    STATIC_TENSOR_ANALYSIS = 3,
+    DEBUG_DUMPPING = 4,
+    DEBUG_POOLINFO_DUMPPING = 5,
+    TRACE_DUMPPING = 6,
+    CONFIG_OPTIMIZATION = 7,
+    GROUP_OPTIMIZATION = 8,
+    NUMS_OF_SIM_CONTROL_MODE = 9
 }SimControlMode_t;
 
 void set_sim_control_mode(SimControlMode_t mode, bool enable);
@@ -241,6 +242,15 @@ struct SimulatorModeController{
     static bool enable_profiling;
     static bool is_profiling();
     static void set_profiling(bool profiling);
+
+    /*
+    deploy the static tensor analysis or not
+    true, anaylzing static tensor
+    false, not analyzing static tensor
+    */
+    static bool enable_static_tensor_analysis;
+    static bool is_static_tensor_analysis();
+    static void set_static_tensor_analysis(bool analysis);
 
     /*
     control dumping trace to file for simulation and allocator

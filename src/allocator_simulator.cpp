@@ -451,9 +451,11 @@ size_t allocatorSim::get_max_allocated_bytes() {
     return max_allocated_bytes;
 }
 
-void allocatorSim::set_max_memory_usage(size_t allocated_bytes, size_t reserved_bytes) {
-    max_allocated_bytes = allocated_bytes;
-    max_reserved_bytes = reserved_bytes;
+void allocatorSim::reset_memory_usage() {
+    max_allocated_bytes = 0;
+    current_allocated_bytes = 0;
+    max_reserved_bytes = 0;
+    current_reserved_bytes = 0;
 }
 
 }  // namespace AllocatorSim
