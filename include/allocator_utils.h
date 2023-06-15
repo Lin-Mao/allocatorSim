@@ -217,6 +217,8 @@ struct SimulatorModeController{
     */
    static void init();
 
+   static void show();
+
     /*
     control the way to collect trace
     true: async, optimization and tracing is in this mode

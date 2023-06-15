@@ -7,6 +7,7 @@
 #include "utils/sanitizer_api.h"
 
 #include <fstream>
+#include <filesystem>
 
 namespace c10 {
 namespace cuda {
@@ -117,6 +118,8 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     // sanitizer_callbacks_subscribe();
 
     sim_control::SimulatorModeController::init();
+
+    sim_control::SimulatorModeController::show();
 
     DumpDebugging::enableDumppingDebugInfo();
 
@@ -510,8 +513,57 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
     free((void*)pointer);
 }
 
+void allocatorMgr::dump_trace_to_file() {
+    std::string dump_path = "./output/";
+    std::string trace_file = "trace.csv";
+
+    // in case the directory is not existed
+    if (!std::filesystem::is_directory(dump_path)) {
+        int ret = system(("mkdir -p " + dump_path).c_str());
+        if (ret != 0) {}
+    }
+
+    if (iteration == 0) {
+        std::ofstream output(dump_path + trace_file);
+        output.close();
+    }
+
+    // max iterations to collect trace
+    size_t max_monitored_iterations = 2;
+    if (iteration > max_monitored_iterations) {
+        return ;
+    }
+
+    std::ofstream output(dump_path + trace_file, std::ios::app);
+    output << "iteration: " << iteration << ", block trace" << std::endl;
+    for (auto b : _block_trace) {
+        // malloc_op_id, free_op_id, size
+        output << b.first << "," << b.second.first << "," << b.second.second << std::endl;
+    }
+    output << "iteration: " << iteration << ", active block trace" << std::endl;
+    for (auto b : _active_blocks) {
+        // ptr, malloc_op_id, size
+        output << reinterpret_cast<uint64_t>(b.first) << "," << b.second.first << "," << b.second.second << std::endl;
+    }
+    output << "iteration: " << iteration << ", api trace" << std::endl;
+    for (auto a : _api_trace) {
+        // api_op_id, api_type
+        output << a.first << "," << static_cast<uint32_t>(a.second) << std::endl;
+    }
+    output.close();
+
+    _block_trace.clear();
+    _api_trace.clear();
+
+}
+
 bool allocatorMgr::iter_end() {
     bool result = false;    // indicates whether applying a online optimization
+    if (sim_control::SimulatorModeController::is_trace_dumpping()) {
+        dump_trace_to_file();
+        iteration++;
+        return result;
+    }
     if (sim_control::SimulatorModeController::is_profiling()) {
         size_t max_monitored_iterations = 2;
         // search configs when reaching the max monitored iterations

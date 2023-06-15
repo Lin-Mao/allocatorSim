@@ -1,5 +1,6 @@
 #include "allocator_utils.h"
 #include <iostream>
+#include <iomanip>
 
 namespace c10 {
 namespace cuda {
@@ -81,7 +82,8 @@ void allocatorTimer::print_timer(int index) {
 /******************************************************************************/
 namespace sim_control{
 
-bool disable_controller_init = false;
+// this may override the API calls in python code, so we need to disable it
+bool disable_controller_init = true;
 
 void print_sim_mode_controller(SimControlMode_t mode, bool enable) {
     std::string mode_name;
@@ -198,6 +200,29 @@ void SimulatorModeController::init() {
     enable_trace_dumpping = false;
     enable_config_optimization = true;
     enable_group_optimization = false;
+}
+
+void SimulatorModeController::show() {
+    int width = 32;
+    std::cout << std::setw(width) << std::left << "SimulatorModeController: " << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_async_tracing: " << std::boolalpha
+                << enable_async_tracing << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_functionality_checking: "
+                << std::boolalpha << enable_functionality_checking << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_profiling: " << std::boolalpha
+                << enable_profiling << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_static_tensor_analysis: " << std::boolalpha
+                << enable_static_tensor_analysis << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_debug_dumpping: " << std::boolalpha
+                << enable_debug_dumpping << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_debug_poolinfo_dumpping: " << std::boolalpha
+                << enable_debug_poolinfo_dumpping << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_trace_dumpping: " << std::boolalpha
+                << enable_trace_dumpping << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_config_optimization: " << std::boolalpha
+                << enable_config_optimization << std::endl;
+    std::cout << std::setw(width) << std::left << "enable_group_optimization: " << std::boolalpha
+                << enable_group_optimization << std::endl;
 }
 
 bool SimulatorModeController::enable_async_tracing = true;

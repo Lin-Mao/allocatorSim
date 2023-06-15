@@ -188,6 +188,9 @@ private:
     void optimize_functionality();
 
     void empty_cache();
+
+    // have not access to BD models, use this func to collect the model trace
+    void dump_trace_to_file();
     
 public:
     allocatorMgr();

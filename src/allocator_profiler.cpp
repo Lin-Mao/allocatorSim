@@ -229,6 +229,7 @@ void allocatorProf::dump_op_type_list(std::string filename) {
 /******************************************************************************/
 /******************************** DumpDebugging *******************************/
 /******************************************************************************/
+// This is for the comparison between simulator and allocator
 namespace DumpDebugging {
 namespace {
     std::string dump_path = "";
