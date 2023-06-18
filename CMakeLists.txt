@@ -26,6 +26,10 @@ if (NOT ${Python_FOUND})
     message(SEND_ERROR "PYTHON not found")
 endif()
 include_directories(${Python_INCLUDE_DIRS})
+message(STATUS "PCA_CHECK_POINT")
+message(STATUS "Python_FOUND: ${Python_FOUND}")
+message(STATUS "Python_INCLUDE_DIRS: ${Python_INCLUDE_DIRS}")
+message(STATUS "Python_LIBRARIES: ${Python_LIBRARIES}")
 
 # libunwind
 set(LIBUNWIND_LIBRARIES /usr/lib/x86_64-linux-gnu)
