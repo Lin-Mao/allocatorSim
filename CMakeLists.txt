@@ -21,7 +21,7 @@ endif()
 message(STATUS "TORCH_INSTALL_LIB_DIR: ${TORCH_INSTALL_LIB_DIR}")
 
 # python
-find_package(Python COMPONENTS Interpreter Development)
+find_package(Python3 COMPONENTS Interpreter Development)
 if (NOT ${Python_FOUND})
     message(SEND_ERROR "PYTHON not found")
 endif()
