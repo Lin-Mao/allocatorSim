@@ -25,6 +25,7 @@ find_package(Python3 COMPONENTS Interpreter Development)
 if (NOT ${Python_FOUND})
     message(SEND_ERROR "PYTHON not found")
 endif()
+include_directories(${Python_INCLUDE_DIRS})
 
 # libunwind
 set(LIBUNWIND_LIBRARIES /usr/lib/x86_64-linux-gnu)
