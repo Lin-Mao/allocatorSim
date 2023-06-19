@@ -7,7 +7,7 @@
 #include "utils/sanitizer_api.h"
 
 #include <fstream>
-#include <filesystem>
+#include <experimental/filesystem>
 
 namespace c10 {
 namespace cuda {
@@ -522,7 +522,7 @@ void allocatorMgr::dump_trace_to_file() {
     std::string trace_file = "trace.csv";
 
     // in case the directory is not existed
-    if (!std::filesystem::is_directory(dump_path)) {
+    if (!std::experimental::filesystem::is_directory(dump_path)) {
         int ret = system(("mkdir -p " + dump_path).c_str());
         if (ret != 0) {}
     }
@@ -892,7 +892,7 @@ void allocatorMgr::dump_memory_usage_to_file() {
     std::string trace_file = "memory.csv";
 
     // in case the directory is not existed
-    if (!std::filesystem::is_directory(dump_path)) {
+    if (!std::experimental::is_directory(dump_path)) {
         int ret = system(("mkdir -p " + dump_path).c_str());
         if (ret != 0) {}
     }

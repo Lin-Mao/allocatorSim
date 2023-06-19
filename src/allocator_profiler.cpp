@@ -1,5 +1,5 @@
 #include "allocator_profiler.h"
-#include <filesystem>
+#include <experimental/filesystem>
 #include <iostream>
 
 namespace c10 {
@@ -19,7 +19,7 @@ allocatorProf::~allocatorProf() {
     std::string path = "./output/";
 
     // in case the directory is not created
-    if (!std::filesystem::is_directory(path)) {
+    if (!std::experimental::filesystem::is_directory(path)) {
         int ret = system(("mkdir -p " + path).c_str());
         if (ret != 0) {}
     }
@@ -277,7 +277,7 @@ void enableDumppingDebugInfo() {
     dump_path = "./output/";
 
     // in case the directory is not created
-    if (!std::filesystem::is_directory(dump_path)) {
+    if (!std::experimental::filesystem::is_directory(dump_path)) {
         int ret = system(("mkdir -p " + dump_path).c_str());
         if (ret != 0) {}
     }
