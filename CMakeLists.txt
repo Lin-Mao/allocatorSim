@@ -6,7 +6,6 @@ set(C10_CUDA_SIMULATOR_SRCS
     src/allocator_manager.cpp
     src/allocator_profiler.cpp
     src/allocator_utils.cpp
-    src/utils/python_states.cpp
     src/utils/hash.cpp
     src/utils/unwind_utils.cpp
     src/utils/sanitizer_api.cpp
@@ -51,11 +50,10 @@ add_subdirectory(${PYBIND11_DIR})
 
 add_library(allocatorsim SHARED ${C10_CUDA_SIMULATOR_SRCS})
 target_include_directories(allocatorsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-                            ${Python_INCLUDE_DIRS}
                             ${PYBIND11_DIR}/include
                             ${SANITIZER_DIR}/include
                             ${CUDA_DIR}/include)
 
-target_link_libraries(allocatorsim ${Python_LIBRARIES} ${SANITIZER_LIB} ${LIBUNWIND_LIB})
+target_link_libraries(allocatorsim ${SANITIZER_LIB} ${LIBUNWIND_LIB})
 
 install(TARGETS allocatorsim DESTINATION ${TORCH_INSTALL_LIB_DIR})
