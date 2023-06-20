@@ -54,6 +54,6 @@ target_include_directories(allocatorsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inclu
                             ${SANITIZER_DIR}/include
                             ${CUDA_DIR}/include)
 
-target_link_libraries(allocatorsim ${SANITIZER_LIB} ${LIBUNWIND_LIB})
+target_link_libraries(allocatorsim ${SANITIZER_LIB} ${LIBUNWIND_LIB} stdc++fs)
 
 install(TARGETS allocatorsim DESTINATION ${TORCH_INSTALL_LIB_DIR})
