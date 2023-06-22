@@ -25,6 +25,9 @@ find_package(Python COMPONENTS Interpreter Development)
 if (NOT ${Python_FOUND})
     message(SEND_ERROR "PYTHON not found")
 endif()
+message(STATUS "PYTHON found: ${Python_FOUND}")
+message(STATUS "PYTHON include: ${Python_INCLUDE_DIRS}")
+message(STATUS "PYTHON libraries: ${Python_LIBRARIES}")
 
 # libunwind
 set(LIBUNWIND_LIBRARIES /usr/lib/x86_64-linux-gnu)
@@ -32,6 +35,7 @@ find_library(LIBUNWIND_LIB NAMES unwind PATHS ${LIBUNWIND_LIBRARIES})
 if (NOT LIBUNWIND_LIB)
     message(SEND_ERROR "LIBUNWIND not found")
 endif()
+message(STATUS "LIBUNWIND found: ${LIBUNWIND_LIB}")
 
 # cuda-sanitizer
 set(CUDA_DIR /usr/local/cuda)
