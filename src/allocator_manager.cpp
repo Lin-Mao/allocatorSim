@@ -891,7 +891,7 @@ void allocatorMgr::dump_memory_usage_to_file() {
     std::string trace_file = "memory.csv";
 
     // in case the directory is not existed
-    if (!std::filesystem::is_directory(dump_path)) {
+    if (!fs::is_directory(dump_path)) {
         int ret = system(("mkdir -p " + dump_path).c_str());
         if (ret != 0) {}
     }
