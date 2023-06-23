@@ -39,12 +39,17 @@ message(STATUS "LIBUNWIND found: ${LIBUNWIND_LIB}")
 
 # cuda-sanitizer
 set(CUDA_DIR /usr/local/cuda)
-set(SANITIZER_DIR ${CUDA_DIR}/compute-sanitizer)
+if(NOT DEFINED ENV{OLD_CUDA_VERSION})
+    set(SANITIZER_DIR ${CUDA_DIR}/compute-sanitizer)
+else()
+    set(SANITIZER_DIR ${CUDA_DIR}/extras/Sanitizer)
+endif()
 
 find_library(SANITIZER_LIB NAMES sanitizer-public PATHS ${SANITIZER_DIR})
 if (NOT SANITIZER_LIB)
     message(SEND_ERROR "SANITIZER not found")
 endif()
+message(STATUS "SANITIZER found: ${SANITIZER_LIB}")
 
 set(PYBIND11_DIR ${CMAKE_CURRENT_SOURCE_DIR}/pybind11)
 add_subdirectory(${PYBIND11_DIR})
