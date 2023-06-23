@@ -16,17 +16,12 @@
 #include <unordered_map>
 #include <tuple>
 
+// GCC version should be greater than 5.0
 // handle filesystem on old compilers
-#if __GNUC__ >= 5
-    // handle filesystem on old compilers
-    #if __has_include(<filesystem>)
-        #include <filesystem>
-        namespace fs = std::filesystem;
-    #elif __has_include(<experimental/filesystem>)
-        #include <experimental/filesystem>
-        namespace fs = std::experimental::filesystem;
-    #endif
-#else
+#if __has_include(<filesystem>)
+    #include <filesystem>
+    namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
     #include <experimental/filesystem>
     namespace fs = std::experimental::filesystem;
 #endif
