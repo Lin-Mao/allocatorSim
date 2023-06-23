@@ -143,6 +143,10 @@ allocatorMgr::~allocatorMgr() {
         // may not used, mark it as deprecated
         optimize_functionality();
     }
+
+    if (sim_control::SimulatorModeController::is_trace_dumpping()) {
+        dump_memory_usage_to_file();
+    }
 }
 
 void allocatorMgr::test_simulator() {
@@ -874,6 +878,34 @@ bool allocatorMgr::check_callpath() {
     }
     return false;
 }
+
+void allocatorMgr::collect_memory_usage(int64_t size, size_t allocated_cur, size_t reserved_cur) {
+    max_allocator_allocated = std::max(max_allocator_allocated, allocated_cur);
+    max_allocator_reserved = std::max(max_allocator_reserved, reserved_cur);
+    auto mem = std::make_tuple(get_global_op_id(), size, allocated_cur, reserved_cur);
+    _allocator_mem_usage.push_back(mem);
+}
+
+void allocatorMgr::dump_memory_usage_to_file() {
+    std::string dump_path = "./output/";
+    std::string trace_file = "memory.csv";
+
+    // in case the directory is not existed
+    if (!std::filesystem::is_directory(dump_path)) {
+        int ret = system(("mkdir -p " + dump_path).c_str());
+        if (ret != 0) {}
+    }
+
+    std::ofstream output(dump_path + trace_file);
+    for (auto m : _allocator_mem_usage) {
+        output << std::get<0>(m) << "," << std::get<1>(m) << "," << std::get<2>(m) << "," << std::get<3>(m) << std::endl;
+    }
+    output << std::endl;
+    output << "max_allocated," << max_allocator_allocated << std::endl;
+    output << "max_reserved," << max_allocator_reserved << std::endl;
+    output.close();
+}
+
 
 }  // namespace AllocatorSim
 }  // namespace cuda

@@ -98,6 +98,11 @@ private:
     trace_t _block_trace;
     std::map<op_id_t, AllocatorEventType_t> _api_trace;
 
+    // <op_id, <size, allocated_curr, reserved_curr>>
+    std::vector<std::tuple<op_id_t, int64_t, size_t, size_t>> _allocator_mem_usage;
+    size_t max_allocator_reserved = 0;
+    size_t max_allocator_allocated = 0;
+
     // not used, need to collect alloc_size if used
     // std::map<void*, std::pair<uint64_t, size_t>> _active_segments;
     // trace_t _segment_trace;
@@ -191,6 +196,8 @@ private:
 
     // have not access to BD models, use this func to collect the model trace
     void dump_trace_to_file();
+
+    void dump_memory_usage_to_file();
     
 public:
     allocatorMgr();
@@ -214,6 +221,8 @@ public:
     size_t get_allocation_size(size_t size);
 
     bool check_callpath();
+
+    void collect_memory_usage(int64_t size, size_t allocated_cur, size_t reserved_cur);
 
 };
 
