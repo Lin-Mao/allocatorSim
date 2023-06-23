@@ -17,12 +17,18 @@
 #include <tuple>
 
 // handle filesystem on old compilers
-#if __has_include(<filesystem>)
-#    include <filesystem>
+#if __GNUC__ >= 5
+    // handle filesystem on old compilers
+    #if __has_include(<filesystem>)
+        #include <filesystem>
         namespace fs = std::filesystem;
-#elif __has_include(<experimental/filesystem>)
-#    include <experimental/filesystem>
+    #elif __has_include(<experimental/filesystem>)
+        #include <experimental/filesystem>
         namespace fs = std::experimental::filesystem;
+    #endif
+#else
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
 #endif
 
 namespace c10 {
