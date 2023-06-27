@@ -59,8 +59,3 @@ $(OBJ_DIR)%.o: $(SRC_DIR)/*/%.cpp
 .PHONY: clean
 clean:
 	-rm -rf $(OBJ_DIR) $(EXE_DIR) $(LIB_DIR) build/
-
-# Build test with cmake
-test:
-	cmake -B build
-	cmake --build build

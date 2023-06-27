@@ -257,6 +257,7 @@ void SimulatorModeController::set_static_tensor_analysis(bool analysis) {
     enable_static_tensor_analysis = analysis;
 }
 
+// Use macro DUMP_INFO_TO_FILE_DEBUGGING for now
 bool SimulatorModeController::enable_debug_dumpping = false;
 bool SimulatorModeController::is_debug_dumpping() {
     return enable_debug_dumpping;

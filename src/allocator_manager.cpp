@@ -143,6 +143,10 @@ allocatorMgr::~allocatorMgr() {
         // may not used, mark it as deprecated
         optimize_functionality();
     }
+
+    if (sim_control::SimulatorModeController::is_trace_dumpping()) {
+        dump_memory_usage_to_file();
+    }
 }
 
 void allocatorMgr::test_simulator() {
@@ -512,8 +516,57 @@ void allocatorMgr::free_cpu_memory_chunk(char* pointer) {
     free((void*)pointer);
 }
 
+void allocatorMgr::dump_trace_to_file() {
+    std::string dump_path = "./output/";
+    std::string trace_file = "trace.csv";
+
+    // in case the directory is not existed
+    if (!fs::is_directory(dump_path)) {
+        int ret = system(("mkdir -p " + dump_path).c_str());
+        if (ret != 0) {}
+    }
+
+    if (iteration == 0) {
+        std::ofstream output(dump_path + trace_file);
+        output.close();
+    }
+
+    // max iterations to collect trace
+    size_t max_monitored_iterations = 2;
+    if (iteration > max_monitored_iterations) {
+        return ;
+    }
+
+    std::ofstream output(dump_path + trace_file, std::ios::app);
+    output << "iteration: " << iteration << ", block trace" << std::endl;
+    for (auto b : _block_trace) {
+        // malloc_op_id, free_op_id, size
+        output << b.first << "," << b.second.first << "," << b.second.second << std::endl;
+    }
+    output << "iteration: " << iteration << ", active block trace" << std::endl;
+    for (auto b : _active_blocks) {
+        // ptr, malloc_op_id, size
+        output << reinterpret_cast<uint64_t>(b.first) << "," << b.second.first << "," << b.second.second << std::endl;
+    }
+    output << "iteration: " << iteration << ", api trace" << std::endl;
+    for (auto a : _api_trace) {
+        // api_op_id, api_type
+        output << a.first << "," << static_cast<uint32_t>(a.second) << std::endl;
+    }
+    output.close();
+
+    _block_trace.clear();
+    _api_trace.clear();
+
+}
+
 bool allocatorMgr::iter_end() {
     bool result = false;    // indicates whether applying a online optimization
+    if (sim_control::SimulatorModeController::is_trace_dumpping()) {
+        dump_trace_to_file();
+        iteration++;
+        return result;
+    }
     if (sim_control::SimulatorModeController::is_profiling()) {
         size_t max_monitored_iterations = 2;
         // search configs when reaching the max monitored iterations
@@ -825,6 +878,34 @@ bool allocatorMgr::check_callpath() {
     }
     return false;
 }
+
+void allocatorMgr::collect_memory_usage(int64_t size, size_t allocated_cur, size_t reserved_cur) {
+    max_allocator_allocated = std::max(max_allocator_allocated, allocated_cur);
+    max_allocator_reserved = std::max(max_allocator_reserved, reserved_cur);
+    auto mem = std::make_tuple(get_global_op_id(), size, allocated_cur, reserved_cur);
+    _allocator_mem_usage.push_back(mem);
+}
+
+void allocatorMgr::dump_memory_usage_to_file() {
+    std::string dump_path = "./output/";
+    std::string trace_file = "memory.csv";
+
+    // in case the directory is not existed
+    if (!fs::is_directory(dump_path)) {
+        int ret = system(("mkdir -p " + dump_path).c_str());
+        if (ret != 0) {}
+    }
+
+    std::ofstream output(dump_path + trace_file);
+    for (auto m : _allocator_mem_usage) {
+        output << std::get<0>(m) << "," << std::get<1>(m) << "," << std::get<2>(m) << "," << std::get<3>(m) << std::endl;
+    }
+    output << std::endl;
+    output << "max_allocated," << max_allocator_allocated << std::endl;
+    output << "max_reserved," << max_allocator_reserved << std::endl;
+    output.close();
+}
+
 
 }  // namespace AllocatorSim
 }  // namespace cuda
