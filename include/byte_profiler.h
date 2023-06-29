@@ -1,3 +1,9 @@
+/**
+ * This code (byte_profiler.h and byte_profiler.cpp) is dedicated to the byte branch,
+ * which is used to pinpoint the memory issues (the unexpected gap between allocated and reserved memory)
+ * during the LLM training. This code is a independent module and does not interact with original simulator.
+ * It supports multiple-card scenarios in ByteDance with faster profiling speed.
+**/
 #ifndef BYTE_PROFILER_H
 #define BYTE_PROFILER_H
 
