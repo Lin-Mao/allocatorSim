@@ -9,7 +9,7 @@ namespace cuda {
 namespace ByteProfiler {
 namespace {
     int device_index = 0;
-    int max_step_monitored = 5;
+    int max_step_monitored = 10;
 
     std::unordered_map<cudaStream_t, int> stream2int;
 }  // anonymous namespace for variables
@@ -76,6 +76,7 @@ void device_allocator::step_end() {
     if (step_id >= max_step) {
         return;
     }
+    std::cout << "Monitor step " << step_id << " ends." << std::endl;
     std::string path = "./output/";
     std::ofstream output(path + memory_file, std::ios::app);
     output << "<<<<<<<<<< step " << step_id << " end >>>>>>>>>>" << std::endl;
