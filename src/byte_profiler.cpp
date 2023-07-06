@@ -2,6 +2,8 @@
 #include "allocator_utils.h"
 #include <fstream>
 #include <iostream>
+#include <cstdlib>
+#include <string>
 
 
 namespace c10 {
@@ -25,13 +27,21 @@ device_allocator::device_allocator() {
 
     max_step = max_step_monitored;
 
-    std::string path = "./output/";
+    auto pca_dir = std::getenv("PYTORCH_PCA_TRACE_DIR");
+    if (pca_dir) {
+        path = pca_dir;
+        std::cout << "PYTORCH_PCA_TRACE_DIR is set to " << path << std::endl;
+    } else {
+        path = "./output/";
+        std::cout << "PYTORCH_PCA_TRACE_DIR is not set. Use default value: ./output/" << std::endl;
+    }
+
     // in case the directory is not created
     if (!fs::is_directory(path)) {
         int ret = system(("mkdir -p " + path).c_str());
         if (ret != 0) {}
     }
-    memory_file = "device" + std::to_string(this->device) + "_memory" + ".csv";
+    memory_file = "/device" + std::to_string(this->device) + "_memory" + ".csv";
     std::ofstream output(path + memory_file);
     output << "global_id,stream_id,size,allocated_cur,reserved_cur" << std::endl;
     output.close();
@@ -39,7 +49,6 @@ device_allocator::device_allocator() {
 }
 
 device_allocator::~device_allocator() {
-    std::string path = "./output/";
     std::ofstream output(path + memory_file, std::ios::app);
     output << std::endl;
     output << "max_allocated_size," << max_allocated_size << std::endl;
@@ -61,7 +70,6 @@ void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
         stream_id = stream2int[stream];
     }
 
-    std::string path = "./output/";
     std::ofstream output(path + memory_file, std::ios::app);
     output << global_id << "," << stream_id << "," << size << ","
            << allocated_cur << "," << reserved_cur << std::endl;
