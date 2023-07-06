@@ -26,6 +26,7 @@ class device_allocator{
     size_t max_allocated_size = 0;
 
     std::string memory_file;
+    std::string path;
 
 public:
     device_allocator();
