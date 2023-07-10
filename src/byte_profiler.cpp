@@ -82,7 +82,7 @@ void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
 
 void device_allocator::step_end() {
     if (step_id >= max_step) {
-        return;
+        exit(0);
     }
     std::cout << "Monitor step " << step_id << " ends." << std::endl;
     std::string path = "./output/";
