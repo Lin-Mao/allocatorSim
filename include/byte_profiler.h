@@ -21,7 +21,7 @@ private:
     int device;
     op_id_t global_id = 0;
     int step_id = 0;
-    int max_step;
+    const int max_step = 10;
 
     size_t max_reserved_size = 0;
     size_t max_allocated_size = 0;

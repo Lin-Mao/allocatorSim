@@ -20,15 +20,14 @@ namespace {
 }  // anonymous namespace for variables
 
 void set_max_step(int max_step) {
-    max_step_monitored = max_step;
+    // max_step_monitored = max_step;
+    return;
 }
 
 device_allocator::device_allocator() {
     std::cout << "Device allocator of device " << device_index << " is created." << std::endl;
     this->device = device_index;
     device_index++;
-
-    max_step = max_step_monitored;
 
     auto pca_dir = std::getenv("PYTORCH_PCA_TRACE_DIR");
     if (pca_dir) {
@@ -45,7 +44,7 @@ device_allocator::device_allocator() {
         if (ret != 0) {}
     }
     memory_file = "/device" + std::to_string(this->device) + "_memory" + ".csv";
-    std::ofstream output(path + memory_file);
+    std::ofstream output(path + memory_file, std::ios::app);
     output << "global_id,stream_id,size,allocated_cur,reserved_cur" << std::endl;
     output.close();
     
