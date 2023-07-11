@@ -17,6 +17,7 @@ namespace ByteProfiler {
 typedef uint64_t op_id_t;
 
 class device_allocator{
+private:
     int device;
     op_id_t global_id = 0;
     int step_id = 0;

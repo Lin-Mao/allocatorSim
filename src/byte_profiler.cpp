@@ -85,7 +85,6 @@ void device_allocator::step_end() {
         exit(0);
     }
     std::cout << "Monitor step " << step_id << " ends." << std::endl;
-    std::string path = "./output/";
     std::ofstream output(path + memory_file, std::ios::app);
     output << "<<<<<<<<<< step " << step_id << " end >>>>>>>>>>" << std::endl;
     step_id++;
