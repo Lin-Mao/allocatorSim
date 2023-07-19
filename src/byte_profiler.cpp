@@ -38,11 +38,20 @@ device_allocator::device_allocator() {
         std::cout << "PYTORCH_PCA_TRACE_DIR is not set. Use default value: ./output/" << std::endl;
     }
 
+    auto global_rank = std::getenv("RANK");
+    if (global_rank) {
+        path += "rank" + std::string(global_rank) + "/";
+        std::cout << "GLOBAL RANK: " << global_rank << std::endl;
+    } else {
+        std::cout << "GLOBAL RANK: NULL"<< std::endl;
+    }
+
     // in case the directory is not created
     if (!fs::is_directory(path)) {
         int ret = system(("mkdir -p " + path).c_str());
         if (ret != 0) {}
     }
+
     memory_file = "/device" + std::to_string(this->device) + "_memory" + ".csv";
     std::ofstream output(path + memory_file, std::ios::app);
     output << "global_id,stream_id,size,allocated_cur,reserved_cur" << std::endl;
