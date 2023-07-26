@@ -1,16 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(C10_CUDA_SIMULATOR_SRCS
-    src/allocator_config.cpp
-    src/allocator_simulator.cpp
-    src/allocator_manager.cpp
-    src/allocator_profiler.cpp
-    src/allocator_utils.cpp
-    src/utils/python_states.cpp
-    src/utils/hash.cpp
-    src/utils/unwind_utils.cpp
-    src/utils/sanitizer_api.cpp
-)
+file(GLOB_RECURSE C10_CUDA_SIMULATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+message(STATUS "C10_CUDA_SIMULATOR_SRCS: ${C10_CUDA_SIMULATOR_SRCS}")
 
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_CXX_STANDARD 17)
