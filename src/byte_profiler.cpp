@@ -14,7 +14,7 @@ namespace {
     std::atomic<int> device_index(0);
     const int max_step_monitored = 10;
     std::atomic<int> total_finished(0);
-    const int num_devices = 16;
+    const int num_devices = 8;
 
     std::unordered_map<cudaStream_t, int> stream2int;
 }  // anonymous namespace for variables
