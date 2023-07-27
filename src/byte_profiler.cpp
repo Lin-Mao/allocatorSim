@@ -1,3 +1,8 @@
+/*
+* This is a profiler for multi-GPU.
+* local compilation: USE_CUDA=1 MAX_JOBS=120 python3 setup.py install --user
+*/
+
 #include "byte_profiler.h"
 #include "allocator_utils.h"
 #include <fstream>
@@ -11,7 +16,6 @@ namespace c10 {
 namespace cuda {
 namespace ByteProfiler {
 namespace {
-    std::atomic<int> device_index(0);
     const int max_step_monitored = 10;
     std::atomic<int> total_finished(0);
     const int num_devices = 8;
@@ -25,9 +29,9 @@ void set_max_step(int max_step) {
 }
 
 device_allocator::device_allocator() {
-    std::cout << "Device allocator of device " << device_index << " is created." << std::endl;
-    this->device = device_index;
-    device_index++;
+    auto d_index = std::stoi(std::getenv("LOCAL_RANK"));
+    std::cout << "Device allocator of device " << d_index << " is created." << std::endl;
+    this->device = d_index;
 
     auto pca_dir = std::getenv("PYTORCH_PCA_TRACE_DIR");
     if (pca_dir) {
@@ -40,7 +44,9 @@ device_allocator::device_allocator() {
 
     auto global_rank = std::getenv("RANK");
     if (global_rank) {
-        path += "rank" + std::string(global_rank) + "/";
+        auto gr = std::stoi(std::string(global_rank)) / 8;
+
+        path += "/rank" + std::to_string(gr) + "/";
         std::cout << "GLOBAL RANK: " << global_rank << std::endl;
     } else {
         std::cout << "GLOBAL RANK: NULL"<< std::endl;
