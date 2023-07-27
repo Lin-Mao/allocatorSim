@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
-import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
@@ -56,7 +55,7 @@ class MyDataset(Dataset):
         self.data = {}
         for i in range(len):
             self.data[i] = (torch.randn(20), torch.randn(1))
-    
+
     def __getitem__(self, index):
         return self.data[index]
 
@@ -96,7 +95,8 @@ def ddp_setup():
     # torchrun will handle the environment variables
     # initialize the process group
     init_process_group("nccl")
-    torch.cuda.set_device(int(os.environ["LOCAL_RANK"])) # set a device to this process
+    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))  # set a device to this process
+
 
 def main(total_epochs, batch_size):
     ddp_setup()
