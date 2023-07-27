@@ -18,7 +18,6 @@ namespace ByteProfiler {
 namespace {
     const int max_step_monitored = 10;
     std::atomic<int> total_finished(0);
-    const int num_devices = 8;
 
     std::unordered_map<cudaStream_t, int> stream2int;
 }  // anonymous namespace for variables
@@ -101,7 +100,7 @@ void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
 void device_allocator::step_end() {
     if (step_id >= max_step) {
         total_finished++;
-        if (total_finished == num_devices) {
+        if (total_finished == std::stoi(std::getenv("WORLD_SIZE"))) {
             std::cout << "All devices have finished their monitoring." << std::endl;
             exit(0);
         }
