@@ -28,7 +28,13 @@ void set_max_step(int max_step) {
 }
 
 device_allocator::device_allocator() {
-    auto d_index = std::stoi(std::getenv("LOCAL_RANK"));
+    int d_index;
+    auto local_rank = std::getenv("LOCAL_RANK");
+    if (local_rank) {
+        d_index = std::stoi(local_rank);
+    } else {
+        d_index = 0;
+    }
     std::cout << "Device allocator of device " << d_index << " is created." << std::endl;
     this->device = d_index;
 
@@ -100,9 +106,12 @@ void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
 void device_allocator::step_end() {
     if (step_id >= max_step) {
         total_finished++;
-        if (total_finished == std::stoi(std::getenv("WORLD_SIZE"))) {
-            std::cout << "All devices have finished their monitoring." << std::endl;
-            exit(0);
+        auto world_size = std::getenv("WORLD_SIZE");
+        if (world_size) {
+            if (total_finished == std::stoi(world_size)) {
+                std::cout << "All devices have finished their monitoring." << std::endl;
+                exit(0);
+            }
         }
     }
     std::cout << "Monitor step " << step_id << " ends." << std::endl;
