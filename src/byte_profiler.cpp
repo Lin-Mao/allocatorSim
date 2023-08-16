@@ -81,9 +81,9 @@ device_allocator::~device_allocator() {
 
 void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
                                             size_t allocated_cur, size_t reserved_cur) {
-    if (step_id >= max_step) {
-        return;
-    }
+    // if (step_id >= max_step) {
+    //     return;
+    // }
 
     // int stream_id;
     // if (stream2int.find(stream) == stream2int.end()) {
@@ -104,16 +104,16 @@ void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
 }
 
 void device_allocator::step_end() {
-    if (step_id >= max_step) {
-        total_finished++;
-        auto world_size = std::getenv("WORLD_SIZE");
-        if (world_size) {
-            if (total_finished == std::stoi(world_size)) {
-                std::cout << "All devices have finished their monitoring." << std::endl;
-                exit(0);
-            }
-        }
-    }
+    // if (step_id >= max_step) {
+    //     total_finished++;
+    //     auto world_size = std::getenv("WORLD_SIZE");
+    //     if (world_size) {
+    //         if (total_finished == std::stoi(world_size)) {
+    //             std::cout << "All devices have finished their monitoring." << std::endl;
+    //             exit(0);
+    //         }
+    //     }
+    // }
     std::cout << "Monitor step " << step_id << " ends." << std::endl;
     std::ofstream output(path + memory_file, std::ios::app);
     output << "<<<<<<<<<< step " << step_id << " end >>>>>>>>>>" << std::endl;
