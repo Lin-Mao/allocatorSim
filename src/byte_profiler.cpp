@@ -72,11 +72,6 @@ device_allocator::device_allocator() {
 }
 
 device_allocator::~device_allocator() {
-    std::ofstream output(path + memory_file, std::ios::app);
-    output << std::endl;
-    output << "max_allocated_size," << max_allocated_size << std::endl;
-    output << "max_reserved_size," << max_reserved_size << std::endl;
-    output.close();
 }
 
 void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
@@ -121,6 +116,16 @@ void device_allocator::step_end() {
     output.close();
 }
 
+
+void device_allocator::profile_end(bool profile) {
+    if (!profile) {  // dump info at the end of profiling
+        std::ofstream output(path + memory_file, std::ios::app);
+        output << std::endl;
+        output << "max_allocated_size," << max_allocated_size << std::endl;
+        output << "max_reserved_size," << max_reserved_size << std::endl;
+        output.close();
+    }
+}
 
 }  // namespace ByteProfiler
 }  // namespace cuda
