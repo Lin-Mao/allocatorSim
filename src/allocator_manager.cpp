@@ -2,7 +2,6 @@
 #include <cassert>
 #include <iomanip>
 #include "utils/hash.h"
-#include "utils/python_states.h"
 #include "utils/unwind_utils.h"
 #include "utils/sanitizer_api.h"
 
@@ -31,7 +30,7 @@ namespace {
 }   // namespace
 
 const static size_t MAX_NUM_STATES = 30;
-thread_local static python_state_t python_states[MAX_NUM_STATES];
+// thread_local static python_state_t python_states[MAX_NUM_STATES];
 
 void load_opt_guidance(std::string filename) {
     std::ifstream in(filename);
@@ -799,20 +798,21 @@ std::string allocatorMgr::get_callpath_hash() {
 }
 
 std::string allocatorMgr::get_python_states() {
-    size_t num_states = 0;
+    // size_t num_states = 0;
 
-    python_state_get(MAX_NUM_STATES, python_states, &num_states);
+    // python_state_get(MAX_NUM_STATES, python_states, &num_states);
 
-    std::stringstream ss;
+    // std::stringstream ss;
 
-    for (size_t i = 0; i < num_states; i++) {
-        ss << std::string(python_states[i].file_name) << ":"
-           << std::to_string(python_states[i].lineno) << std::endl
-           << std::string(python_states[i].function_name) << ":"
-           << std::to_string(python_states[i].function_first_lineno) << std::endl;
-}
-    // std::cout << ss.str() << std::endl;
-    return ss.str();
+    // for (size_t i = 0; i < num_states; i++) {
+    //     ss << std::string(python_states[i].file_name) << ":"
+    //        << std::to_string(python_states[i].lineno) << std::endl
+    //        << std::string(python_states[i].function_name) << ":"
+    //        << std::to_string(python_states[i].function_first_lineno) << std::endl;
+    // }
+    // // std::cout << ss.str() << std::endl;
+    // return ss.str();
+    return "";
 }
 
 bool allocatorMgr::check_callpath() {
