@@ -14,10 +14,9 @@ CUR_DIR := $(shell pwd)
 
 CXX ?=
 
-CFLAGS := -std=c++17 -Wall -I$(PYTHON_INCLUDE_DIR) -I$(PYBIND11_DIR)/include \
-		  -I$(SANITIZER_DIR)/include -I$(CUDA_DIR)/include
-LDFLAGS ?= -L$(PYTHON_LIB_DIR) -L$(SANITIZER_DIR)
-LIBRARY ?= -lpython$(PYTHON_VERSION) -lunwind -lsanitizer-public
+CFLAGS := -std=c++17 -Wall
+LDFLAGS ?= 
+LIBRARY ?= 
 
 ifdef DEBUG
 CFLAGS += -g -O0
