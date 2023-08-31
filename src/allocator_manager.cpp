@@ -1,10 +1,6 @@
 #include "allocator_manager.h"
 #include <cassert>
 #include <iomanip>
-#include "utils/hash.h"
-#include "utils/python_states.h"
-#include "utils/unwind_utils.h"
-#include "utils/sanitizer_api.h"
 
 #include <fstream>
 
@@ -31,7 +27,6 @@ namespace {
 }   // namespace
 
 const static size_t MAX_NUM_STATES = 30;
-thread_local static python_state_t python_states[MAX_NUM_STATES];
 
 void load_opt_guidance(std::string filename) {
     std::ifstream in(filename);
@@ -114,8 +109,6 @@ allocatorMgr::allocatorMgr(int device, int stream) {
     this->device = device;
     this->stream = stream;
 
-    // sanitizer_callbacks_subscribe();
-
     sim_control::SimulatorModeController::init();
 
     sim_control::SimulatorModeController::show();
@@ -130,10 +123,9 @@ allocatorMgr::allocatorMgr(int device, int stream) {
 
 allocatorMgr::~allocatorMgr() {
     std::cout << "Simulator destructor called" << std::endl;
-    std::cout << "Simulator max reserved size: " << get_max_reserved_bytes() << std::endl;
     std::cout << "Simulator max allocated size: " << get_max_allocated_bytes() << std::endl;
-    
-    // sanitizer_callbacks_unsubscribe();
+    std::cout << "Simulator max reserved size: " << get_max_reserved_bytes() << std::endl;
+
 
     if (sim_control::SimulatorModeController::is_async_tracing() && sim_control::SimulatorModeController::is_functionality_checking()) {
         test_functionality_under_collect_trace_async();
@@ -148,8 +140,9 @@ allocatorMgr::~allocatorMgr() {
 void allocatorMgr::test_simulator() {
     process_trace();
     auto memory_usage = simulate_allocator();
+    std::cout << "Max allocated size: " << get_max_allocated_bytes() << std::endl;
     std::cout << "Max reserved size: " << memory_usage << std::endl << std::endl;
-    search_config_with_group();
+    // search_config_with_group();
 }
 
 bool allocatorMgr::check_constraints() {
@@ -793,26 +786,27 @@ size_t allocatorMgr::get_allocation_size(size_t size) {
 
 std::string allocatorMgr::get_callpath_hash() {
     auto python_states = get_python_states();
-    auto cpp_callpath = get_backtrace();
-    return sha256(python_states + cpp_callpath);
+    // auto cpp_callpath = get_backtrace();
+    return "";
     // return python_states + cpp_callpath;
 }
 
 std::string allocatorMgr::get_python_states() {
-    size_t num_states = 0;
+//     size_t num_states = 0;
 
-    python_state_get(MAX_NUM_STATES, python_states, &num_states);
+//     python_state_get(MAX_NUM_STATES, python_states, &num_states);
 
-    std::stringstream ss;
+//     std::stringstream ss;
 
-    for (size_t i = 0; i < num_states; i++) {
-        ss << std::string(python_states[i].file_name) << ":"
-           << std::to_string(python_states[i].lineno) << std::endl
-           << std::string(python_states[i].function_name) << ":"
-           << std::to_string(python_states[i].function_first_lineno) << std::endl;
-}
-    // std::cout << ss.str() << std::endl;
-    return ss.str();
+//     for (size_t i = 0; i < num_states; i++) {
+//         ss << std::string(python_states[i].file_name) << ":"
+//            << std::to_string(python_states[i].lineno) << std::endl
+//            << std::string(python_states[i].function_name) << ":"
+//            << std::to_string(python_states[i].function_first_lineno) << std::endl;
+// }
+//     // std::cout << ss.str() << std::endl;
+//     return ss.str();
+    return "";
 }
 
 bool allocatorMgr::check_callpath() {

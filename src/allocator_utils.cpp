@@ -191,9 +191,9 @@ void SimulatorModeController::init() {
     if (disable_controller_init) {
         return;
     }
-    enable_async_tracing = true;
-    enable_functionality_checking = false;
-    enable_profiling = true;
+    enable_async_tracing = false;
+    enable_functionality_checking = true;
+    enable_profiling = false;
     enable_static_tensor_analysis = false;
     enable_debug_dumpping = false;
     enable_debug_poolinfo_dumpping = false;
