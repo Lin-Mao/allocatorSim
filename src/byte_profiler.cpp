@@ -76,7 +76,7 @@ device_allocator::~device_allocator() {
 
 void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
                                             size_t allocated_cur, size_t reserved_cur) {
-    if (step_id >= max_step) {
+    if (step_id >= max_step_monitored) {
         return;
     }
 
