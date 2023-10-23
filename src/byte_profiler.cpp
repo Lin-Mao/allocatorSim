@@ -65,7 +65,7 @@ device_allocator::device_allocator() {
 
     memory_file = "/device" + std::to_string(this->device) + "_memory" + ".csv";
     std::ofstream output(path + memory_file, std::ios::app);
-    // output << "global_id,stream_id,size,allocated_cur,reserved_cur" << std::endl;
+    output << "global_id,stream_id,size,allocated_cur,reserved_cur" << std::endl;
     output << "allocator: " << this << std::endl;
     output.close();
     
@@ -76,23 +76,23 @@ device_allocator::~device_allocator() {
 
 void device_allocator::collect_memory_usage(cudaStream_t stream, int64_t size,
                                             size_t allocated_cur, size_t reserved_cur) {
-    // if (step_id >= max_step) {
-    //     return;
-    // }
+    if (step_id >= max_step) {
+        return;
+    }
 
-    // int stream_id;
-    // if (stream2int.find(stream) == stream2int.end()) {
-    //     stream_id  = stream2int.size();
-    //     stream2int.emplace(stream, stream_id);
-    // } else {
-    //     stream_id = stream2int[stream];
-    // }
+    int stream_id;
+    if (stream2int.find(stream) == stream2int.end()) {
+        stream_id  = stream2int.size();
+        stream2int.emplace(stream, stream_id);
+    } else {
+        stream_id = stream2int[stream];
+    }
 
-    // std::ofstream output(path + memory_file, std::ios::app);
-    // output << global_id << "," << stream_id << "," << size << ","
-    //        << allocated_cur << "," << reserved_cur << std::endl;
-    // output.close();
-    // global_id++;
+    std::ofstream output(path + memory_file, std::ios::app);
+    output << global_id << "," << stream_id << "," << size << ","
+           << allocated_cur << "," << reserved_cur << std::endl;
+    output.close();
+    global_id++;
     
     max_allocated_size = std::max(max_allocated_size, allocated_cur);
     max_reserved_size = std::max(max_reserved_size, reserved_cur);
